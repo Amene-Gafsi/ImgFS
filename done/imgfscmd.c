@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
             if (!strcmp(current_command, commands[i].command_name))
             {
                 command_found = 1;
-                commands[i].command(1, argv[2]); // call function with one argument corresponding to the second argument of the current process
+                commands[i].command(1, &argv[2]); // call function with one argument corresponding to the second argument of the current process
             } // TODO fct arguments
         }
         if (!command_found)
