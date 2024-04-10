@@ -67,3 +67,17 @@ ORIGINAL: %" PRIu32 " x %" PRIu32 "\n",
     printf("*****************************************\n");
 }
 
+/*******************************************************************
+ * Open imgfs files.
+ */
+
+ int do_open(const char* imgfs_filename, const char* open_mode, struct imgfs_file* imgfs_file)
+ {
+    M_REQUIRE_NON_NULL(imgfs_filename);
+    M_REQUIRE_NON_NULL(open_mode);
+    M_REQUIRE_NON_NULL(imgfs_file);
+
+    fopen(imgfs_file -> file)
+
+ }
+
