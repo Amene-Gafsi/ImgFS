@@ -75,7 +75,7 @@ struct imgfs_file
 {
     FILE* file;
     struct imgfs_header header;
-    struct img_metadata metadata;
+    struct img_metadata* metadata;
 };
 
 /**

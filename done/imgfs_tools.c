@@ -8,22 +8,24 @@
 #include "imgfs.h"
 #include "util.h"
 
-#include <inttypes.h>      // for PRIxN macros
-#include <openssl/sha.h>   // for SHA256_DIGEST_LENGTH
-#include <stdint.h>        // for uint8_t
-#include <stdio.h>         // for sprintf
-#include <stdlib.h>        // for calloc
-#include <string.h>        // for strcmp
+#include <inttypes.h>    // for PRIxN macros
+#include <openssl/sha.h> // for SHA256_DIGEST_LENGTH
+#include <stdint.h>      // for uint8_t
+#include <stdio.h>       // for sprintf
+#include <stdlib.h>      // for calloc
+#include <string.h>      // for strcmp
 
 /*******************************************************************
  * Human-readable SHA
  */
-static void sha_to_string(const unsigned char* SHA,
-                          char* sha_string)
+static void sha_to_string(const unsigned char *SHA,
+                          char *sha_string)
 {
-    if (SHA == NULL) return;
+    if (SHA == NULL)
+        return;
 
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i)
+    {
         sprintf(sha_string + (2 * i), "%02x", SHA[i]);
     }
 
@@ -33,7 +35,7 @@ static void sha_to_string(const unsigned char* SHA,
 /*******************************************************************
  * imgFS header display.
  */
-void print_header(const struct imgfs_header* header)
+void print_header(const struct imgfs_header *header)
 {
     printf("*****************************************\n\
 ********** IMGFS HEADER START ***********\n");
@@ -51,7 +53,7 @@ THUMBNAIL: %" PRIu16 " x %" PRIu16 "\tSMALL: %" PRIu16 " x %" PRIu16 "\n",
 /*******************************************************************
  * Metadata display.
  */
-void print_metadata (const struct img_metadata* metadata)
+void print_metadata(const struct img_metadata *metadata)
 {
     char sha_printable[2 * SHA256_DIGEST_LENGTH + 1];
     sha_to_string(metadata->SHA, sha_printable);
@@ -71,13 +73,44 @@ ORIGINAL: %" PRIu32 " x %" PRIu32 "\n",
  * Open imgfs files.
  */
 
- int do_open(const char* imgfs_filename, const char* open_mode, struct imgfs_file* imgfs_file)
- {
+int do_open(const char *imgfs_filename, const char *open_mode, struct imgfs_file *imgfs_file)
+{
     M_REQUIRE_NON_NULL(imgfs_filename);
     M_REQUIRE_NON_NULL(open_mode);
     M_REQUIRE_NON_NULL(imgfs_file);
 
-    fopen(imgfs_file -> file)
+    FILE *opened_file = fopen(imgfs_filename, open_mode);
+    if (opened_file == NULL)
+        return ERR_IMAGE_NOT_FOUND;
 
- }
+    size_t number_of_items = fread(&(imgfs_file->header), sizeof(imgfs_file->header), 1, opened_file);
+    if (number_of_items == 0)
+        return ERR_IO; // TODO verifier les tests
 
+    struct img_metadata *ptr = calloc(imgfs_file->header.max_files, sizeof(imgfs_file->metadata)); // ptr type
+    if (ptr == NULL)
+        return ERR_IO;
+
+    if (!fseek(opened_file, sizeof(imgfs_file->header), SEEK_SET))
+    {
+        size_t nbr = fread(&(imgfs_file->metadata), sizeof(imgfs_file->metadata), 1, opened_file);
+    }
+    else
+        return ERR_IO;
+
+    return ERR_NONE;
+}
+
+/*******************************************************************
+ * Close imgfs files.
+ */
+void do_close(struct imgfs_file *imgfs_file)
+{
+    if (imgfs_file != NULL)
+    {
+        if (!fclose(imgfs_file))
+        {
+            free(imgfs_file->metadata);
+        }
+    }
+}

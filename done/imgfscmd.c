@@ -9,7 +9,7 @@
 
 #include "imgfs.h"
 #include "imgfscmd_functions.h"
-#include "util.h"   // for _unused
+#include "util.h" // for _unused
 
 #include <stdlib.h>
 #include <string.h>
@@ -19,19 +19,23 @@
 /*******************************************************************************
  * MAIN
  */
-typedef int (*command)(int argc, char* argv[]);
-typedef struct {
-    const char* command_name;
+typedef int (*command)(int argc, char *argv[]);
+typedef struct
+{
+    const char *command_name;
     command command;
 } command_mapping;
-        
-int main(int argc, char* argv[])
+
+int main(int argc, char *argv[])
 {
     int ret = 0;
 
-    if (argc < 2) {
+    if (argc < 2)
+    {
         ret = ERR_NOT_ENOUGH_ARGUMENTS;
-    } else {
+    }
+    else
+    {
         /* **********************************************************************
          * TODO WEEK 07: THIS PART SHALL BE EXTENDED.
          * **********************************************************************
@@ -41,22 +45,27 @@ int main(int argc, char* argv[])
         command_mapping help_command = {"help", help};
         command_mapping delete = {"delete", do_delete_cmd};
 
-        command_mapping commands[NB_COMMANDS] = {list, create, help_command, delete}; 
-        char* current_command = argv[1];
+        command_mapping commands[NB_COMMANDS] = {list, create, help_command, delete};
+        char *current_command = argv[1];
         int command_found = 0;
-        for(int i = 0; i < NB_COMMANDS; i++){
-            if(!strcmp(current_command, commands[i].command_name)){
+        for (int i = 0; i < NB_COMMANDS; i++)
+        {
+            if (!strcmp(current_command, commands[i].command_name))
+            {
                 command_found = 1;
-                commands[i].command(1, argv[2]);   //call function with one argument corresponding to the second argument of the current process
-            }
+                commands[i].command(1, argv[2]); // call function with one argument corresponding to the second argument of the current process
+            } // TODO fct arguments
         }
-        if(!command_found) {
-            ret = ERR_INVALID_COMMAND; 
+        if (!command_found)
+        {
+            ret = ERR_INVALID_COMMAND;
         }
-        argc--; argv++; // skips command call name
+        argc--;
+        argv++; // skips command call name
     }
 
-    if (ret) {
+    if (ret)
+    {
         fprintf(stderr, "ERROR: %s\n", ERR_MSG(ret));
         help(argc, argv);
     }
