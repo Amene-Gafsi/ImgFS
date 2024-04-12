@@ -84,20 +84,20 @@ int do_open(const char *imgfs_filename, const char *open_mode, struct imgfs_file
         return ERR_IO;
     }
 
-    if (fread(&(imgfs_file->header), sizeof(imgfs_file->header), 1, imgfs_file->file) != 1) {
-        fclose(imgfs_file->file); // Close file on error
+    if (fread(&(imgfs_file->header), sizeof(imgfs_file->header), 1, imgfs_file->file) != 1) {  //TODO read header in file
+        fclose(imgfs_file->file); 
         return ERR_IO;
     }
 
     imgfs_file->metadata = calloc(imgfs_file->header.max_files, sizeof(struct img_metadata));
     if (imgfs_file->metadata == NULL) {
-        fclose(imgfs_file->file); // Close file on error
+        fclose(imgfs_file->file);
         return ERR_OUT_OF_MEMORY;
     }
 
     if (fread(imgfs_file->metadata, sizeof(struct img_metadata), imgfs_file->header.max_files, imgfs_file->file) != imgfs_file->header.max_files) {
-        free(imgfs_file->metadata); // Free metadata on error
-        fclose(imgfs_file->file); // Close file on error
+        free(imgfs_file->metadata);
+        fclose(imgfs_file->file);
         return ERR_IO;
     }
 
