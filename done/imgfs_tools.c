@@ -81,7 +81,7 @@ int do_open(const char *imgfs_filename, const char *open_mode, struct imgfs_file
 
     imgfs_file->file = fopen(imgfs_filename, open_mode);
     if (imgfs_file->file == NULL) {
-        return ERR_IMAGE_NOT_FOUND;
+        return ERR_IO;
     }
 
     if (fread(&(imgfs_file->header), sizeof(imgfs_file->header), 1, imgfs_file->file) != 1) {
@@ -113,10 +113,9 @@ void do_close(struct imgfs_file *imgfs_file)
     {
         if (imgfs_file->file != NULL)
         {
-            if (!fclose(imgfs_file->file)) 
-            {
-                free(imgfs_file->metadata);
-            }
+            fclose(imgfs_file->file);
+
         }
+        free(imgfs_file->metadata);
     }
 }

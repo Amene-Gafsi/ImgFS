@@ -4,6 +4,9 @@
 
 int do_list(const struct imgfs_file *imgfs_file, enum do_list_mode output_mode, char **json)
 {
+    if (imgfs_file == NULL)
+        return ERR_INVALID_ARGUMENT;
+
     int exist_image = 0;
     if (output_mode == STDOUT)
     {

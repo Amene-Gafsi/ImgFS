@@ -45,10 +45,13 @@ int do_list_cmd(int argc, char **argv)
      * TODO WEEK 07: WRITE YOUR CODE HERE.
      * **********************************************************************
      */
+    if(argv == NULL) return ERR_INVALID_ARGUMENT;
+
+    if(argc != 1) return ERR_INVALID_COMMAND;
 
     const char *file_name = argv[0];
-    if ((file_name == NULL) || argc != 1)
-        return ERR_INVALID_ARGUMENT;
+
+    if (file_name == NULL) return ERR_INVALID_ARGUMENT;
 
     struct imgfs_file file_to_create;
     memset(&file_to_create, 0, sizeof(file_to_create));
