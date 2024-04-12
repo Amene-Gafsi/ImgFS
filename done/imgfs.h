@@ -51,7 +51,7 @@ extern "C" {
 
 struct imgfs_header
 {
-    char name[MAX_IMGFS_NAME];
+    char name[MAX_IMGFS_NAME+1];
     uint32_t version;
     uint32_t nb_files;
     uint32_t max_files;
@@ -62,7 +62,7 @@ struct imgfs_header
 
 struct img_metadata
 {
-    char img_id[MAX_IMG_ID];
+    char img_id[MAX_IMG_ID+1];
     unsigned char SHA[SHA256_DIGEST_LENGTH]; 
     uint32_t orig_res[2];
     uint32_t size[NB_RES];

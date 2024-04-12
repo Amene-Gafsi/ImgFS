@@ -79,24 +79,27 @@ int do_open(const char *imgfs_filename, const char *open_mode, struct imgfs_file
     M_REQUIRE_NON_NULL(open_mode);
     M_REQUIRE_NON_NULL(imgfs_file);
 
-    FILE *opened_file = fopen(imgfs_filename, open_mode);
-    if (opened_file == NULL)
+    imgfs_file->file = fopen(imgfs_filename, open_mode);
+    if (imgfs_file->file == NULL) {
         return ERR_IMAGE_NOT_FOUND;
-
-    size_t number_of_items = fread(&(imgfs_file->header), sizeof(imgfs_file->header), 1, opened_file);
-    if (number_of_items == 0)
-        return ERR_IO; // TODO verifier les tests
-
-    struct img_metadata *ptr = calloc(imgfs_file->header.max_files, sizeof(imgfs_file->metadata)); // ptr type
-    if (ptr == NULL)
-        return ERR_IO;
-
-    if (!fseek(opened_file, sizeof(imgfs_file->header), SEEK_SET))
-    {
-        size_t nbr = fread(&(imgfs_file->metadata), sizeof(imgfs_file->metadata), 1, opened_file);
     }
-    else
+
+    if (fread(&(imgfs_file->header), sizeof(imgfs_file->header), 1, imgfs_file->file) != 1) {
+        fclose(imgfs_file->file); // Close file on error
         return ERR_IO;
+    }
+
+    imgfs_file->metadata = calloc(imgfs_file->header.max_files, sizeof(struct img_metadata));
+    if (imgfs_file->metadata == NULL) {
+        fclose(imgfs_file->file); // Close file on error
+        return ERR_OUT_OF_MEMORY;
+    }
+
+    if (fread(imgfs_file->metadata, sizeof(struct img_metadata), imgfs_file->header.max_files, imgfs_file->file) != imgfs_file->header.max_files) {
+        free(imgfs_file->metadata); // Free metadata on error
+        fclose(imgfs_file->file); // Close file on error
+        return ERR_IO;
+    }
 
     return ERR_NONE;
 }
@@ -108,9 +111,12 @@ void do_close(struct imgfs_file *imgfs_file)
 {
     if (imgfs_file != NULL)
     {
-        if (!fclose(imgfs_file))
+        if (imgfs_file->file != NULL)
         {
-            free(imgfs_file->metadata);
+            if (!fclose(imgfs_file->file)) 
+            {
+                free(imgfs_file->metadata);
+            }
         }
     }
 }

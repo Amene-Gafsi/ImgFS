@@ -11,13 +11,17 @@ int do_list(const struct imgfs_file *imgfs_file, enum do_list_mode output_mode, 
 
         for (uint32_t i = 0; i < imgfs_file->header.max_files; i++)
         {
-            if ((imgfs_file->metadata)[i].is_valid)
+            if (imgfs_file->metadata != NULL)
             {
-                print_metadata(&(imgfs_file->metadata)[i]);
-                exist_image += 1;
+                if ((imgfs_file->metadata)[i].is_valid)
+                {
+                    print_metadata(&(imgfs_file->metadata)[i]);
+                    exist_image += 1;
+                }
             }
         }
-        if (exist_image == 0) printf("<< empty imgFS >>");
+        if (exist_image == 0)
+            printf("<< empty imgFS >>");
         return ERR_NONE;
     }
     else if (output_mode == JSON)
