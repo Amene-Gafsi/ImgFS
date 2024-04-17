@@ -137,7 +137,7 @@ endif
 		-ex 'n' '$(PWD)/../provided/tests/unit/unit-test-$(EXE)'
 
 define e2e_test
-robot -v srcdir:$(PWD) -v datadir:$(TEST_DIR)/data $(TEST_DIR)/end-to-end/$1 ;
+python3 -m robot -v srcdir:$(PWD) -v datadir:$(TEST_DIR)/data $(TEST_DIR)/end-to-end/$1 ;
 endef
 end2end-tests: $(TARGETS)
 	$(call e2e_test,week07.robot)
