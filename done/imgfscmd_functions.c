@@ -45,13 +45,16 @@ int do_list_cmd(int argc, char **argv)
      * TODO WEEK 07: WRITE YOUR CODE HERE.
      * **********************************************************************
      */
-    if(argv == NULL) return ERR_INVALID_ARGUMENT;
+    if (argv == NULL)
+        return ERR_INVALID_ARGUMENT;
 
-    if(argc != 1) return ERR_INVALID_COMMAND;
+    if (argc != 1)
+        return ERR_INVALID_COMMAND;
 
     const char *file_name = argv[0];
 
-    if (file_name == NULL) return ERR_INVALID_ARGUMENT;
+    if (file_name == NULL)
+        return ERR_INVALID_ARGUMENT;
 
     struct imgfs_file file_to_create;
     memset(&file_to_create, 0, sizeof(file_to_create));
@@ -77,9 +80,74 @@ int do_create_cmd(int argc, char **argv)
      * TODO WEEK 08: WRITE YOUR CODE HERE (and change the return if needed).
      * **********************************************************************
      */
+    struct imgfs_file imgfs_file;
+    memset(&imgfs_file, 0, sizeof(imgfs_file));
+    const char *imgfs_filename = NULL;
+    uint32_t max_files = -1;
+    uint16_t thumb_width = -1;
+    uint16_t thumb_height = -1;
+    uint16_t small_width = -1;
+    uint16_t small_height = -1;
 
-    TO_BE_IMPLEMENTED();
-    return NOT_IMPLEMENTED;
+    for (size_t i = 0; i < argc; i++)
+    {
+        if (!strcmp(argv[i], "imgFS_filename"))
+        {
+            imgfs_filename = argv[i + 1];
+            i = i + 1;
+        }
+        else if (!strcmp(argv[i], "max_files"))
+        {
+            max_files = atouint32(argv[i + 1]);
+            i = i + 1;
+        }
+        else if (!strcmp(argv[i], "thumb_res"))
+        {
+            thumb_width = atouint16(argv[i + 1]);
+            thumb_height = atouint16(argv[i + 2]);
+            i = i + 2;
+        }
+        else if (!strcmp(argv[i], "small_res"))
+        {
+            small_width = atouint16(argv[i + 1]);
+            small_height = atouint16(argv[i + 2]);
+            i = i + 2;
+        }
+    }
+    int return_value = 0;
+    if (imgfs_filename != NULL)
+    {
+        if (max_files > 0)
+        {
+            int entered = 0;
+            if (((thumb_width > 0) && (thumb_height > 0)))
+            {
+                entered++;
+                imgfs_file.header.max_files = max_files;
+                imgfs_file.header.resized_res[0] = thumb_width;
+                imgfs_file.header.resized_res[1] = thumb_height;
+            }
+
+            if (((small_width > 0) && (small_height > 0)))
+            {
+                entered++;
+                imgfs_file.header.max_files = max_files;
+                imgfs_file.header.resized_res[2] = small_width;
+                imgfs_file.header.resized_res[3] = small_height;
+            }
+
+            if (entered == 0)
+                return_value = (thumb_width == 0 || thumb_height == 0 || small_width = 0 || small_height = 0) ? ERR_RESOLUTIONS : ERR_NOT_ENOUGH_ARGUMENTS;
+        }
+        else
+            return_value = (max_files == 0) ? ERR_MAX_FILES : ERR_NOT_ENOUGH_ARGUMENTS;
+    }
+    else
+        return_value = ERR_NOT_ENOUGH_ARGUMENTS;
+
+    if (return_value == ERR_NONE)
+        return_value = do_create(imgfs_filename, imgfs_file);
+    return return_value;
 }
 
 /**********************************************************************
