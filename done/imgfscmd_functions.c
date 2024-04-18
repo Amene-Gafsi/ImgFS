@@ -55,18 +55,22 @@ int do_list_cmd(int argc, char **argv)
 
     if (file_name == NULL)
         return ERR_INVALID_ARGUMENT;
+    int return_value = ERR_NONE;
 
     struct imgfs_file file_to_create;
     memset(&file_to_create, 0, sizeof(file_to_create));
 
-    if (do_open(file_name, "rb", &file_to_create) != ERR_NONE)
-        return ERR_IO;
+    return_value = do_open(file_name, "rb", &file_to_create);
+    if (return_value != ERR_NONE)
+        return return_value;
 
-    if (do_list(&file_to_create, STDOUT, NULL) != ERR_NONE)
-        return ERR_IO; // TODO Json
+    return_value = do_list(&file_to_create, STDOUT, NULL);
+    if (return_value != ERR_NONE)
+        return return_value;
+
     do_close(&file_to_create);
 
-    return ERR_NONE;
+    return return_value;
 }
 
 /**********************************************************************
@@ -74,79 +78,71 @@ int do_list_cmd(int argc, char **argv)
  ********************************************************************** */
 int do_create_cmd(int argc, char **argv)
 {
-
     puts("Create");
     /* **********************************************************************
      * TODO WEEK 08: WRITE YOUR CODE HERE (and change the return if needed).
      * **********************************************************************
      */
+    M_REQUIRE_NON_NULL(argv);
+    if (argc == 0)
+        return ERR_NOT_ENOUGH_ARGUMENTS;
+
+    const char *imgfs_filename = argv[0];
+    uint32_t max_files = default_max_files;
+    uint16_t thumb_width = default_thumb_res, thumb_height = default_thumb_res,
+             small_width = default_small_res, small_height = default_small_res;
+
+    if (argc > 1)
+    {
+        for (int i = 1; i < argc; i++)
+        {
+            if (!strcmp(argv[i], "-max_files"))
+            {
+                if (i + 1 >= argc)
+                    return ERR_NOT_ENOUGH_ARGUMENTS;
+                uint32_t argument_value = atouint32(argv[i + 1]);
+                if (argument_value == 0)
+                    return ERR_INVALID_ARGUMENT;
+                if (argument_value > default_max_files)
+                    return ERR_MAX_FILES;
+                max_files = argument_value;
+                i += 1;
+            }
+            else if (!strcmp(argv[i], "-thumb_res"))
+            {
+                if (i + 2 >= argc)
+                    return ERR_NOT_ENOUGH_ARGUMENTS;
+                uint16_t first_argument_value = atouint16(argv[i + 1]), second_argument_value = atouint16(argv[i + 2]);
+                if (first_argument_value <= 0 || first_argument_value > MAX_THUMB_RES || second_argument_value <= 0 || second_argument_value > MAX_THUMB_RES)
+                    return ERR_RESOLUTIONS;
+                thumb_width = first_argument_value;
+                thumb_height = second_argument_value;
+                i = i + 2;
+            }
+            else if (!strcmp(argv[i], "-small_res"))
+            {
+                if (i + 2 >= argc)
+                    return ERR_NOT_ENOUGH_ARGUMENTS;
+                uint16_t first_argument_value = atouint16(argv[i + 1]), second_argument_value = atouint16(argv[i + 2]);
+                if (first_argument_value <= 0 || first_argument_value > MAX_SMALL_RES || second_argument_value <= 0 || second_argument_value > MAX_SMALL_RES)
+                    return ERR_RESOLUTIONS;
+                small_width = first_argument_value;
+                small_height = second_argument_value;
+                i = i + 2;
+            }
+            else
+                return ERR_INVALID_ARGUMENT;
+        }
+    }
+
+    struct imgfs_header header = {.max_files = max_files,
+                                  .resized_res = {thumb_width, thumb_height, small_width, small_height}};
+
     struct imgfs_file imgfs_file;
-    memset(&imgfs_file, 0, sizeof(imgfs_file));
-    const char *imgfs_filename = NULL;
-    uint32_t max_files = -1;
-    uint16_t thumb_width = -1;
-    uint16_t thumb_height = -1;
-    uint16_t small_width = -1;
-    uint16_t small_height = -1;
+    imgfs_file.header = header;
 
-    for (size_t i = 0; i < argc; i++)
-    {
-        if (!strcmp(argv[i], "imgFS_filename"))
-        {
-            imgfs_filename = argv[i + 1];
-            i = i + 1;
-        }
-        else if (!strcmp(argv[i], "max_files"))
-        {
-            max_files = atouint32(argv[i + 1]);
-            i = i + 1;
-        }
-        else if (!strcmp(argv[i], "thumb_res"))
-        {
-            thumb_width = atouint16(argv[i + 1]);
-            thumb_height = atouint16(argv[i + 2]);
-            i = i + 2;
-        }
-        else if (!strcmp(argv[i], "small_res"))
-        {
-            small_width = atouint16(argv[i + 1]);
-            small_height = atouint16(argv[i + 2]);
-            i = i + 2;
-        }
-    }
-    int return_value = 0;
-    if (imgfs_filename != NULL)
-    {
-        if (max_files > 0)
-        {
-            int entered = 0;
-            if (((thumb_width > 0) && (thumb_height > 0)))
-            {
-                entered++;
-                imgfs_file.header.max_files = max_files;
-                imgfs_file.header.resized_res[0] = thumb_width;
-                imgfs_file.header.resized_res[1] = thumb_height;
-            }
-
-            if (((small_width > 0) && (small_height > 0)))
-            {
-                entered++;
-                imgfs_file.header.max_files = max_files;
-                imgfs_file.header.resized_res[2] = small_width;
-                imgfs_file.header.resized_res[3] = small_height;
-            }
-
-            if (entered == 0)
-                return_value = (thumb_width == 0 || thumb_height == 0 || small_width = 0 || small_height = 0) ? ERR_RESOLUTIONS : ERR_NOT_ENOUGH_ARGUMENTS;
-        }
-        else
-            return_value = (max_files == 0) ? ERR_MAX_FILES : ERR_NOT_ENOUGH_ARGUMENTS;
-    }
-    else
-        return_value = ERR_NOT_ENOUGH_ARGUMENTS;
-
-    if (return_value == ERR_NONE)
-        return_value = do_create(imgfs_filename, imgfs_file);
+    int return_value = do_create(imgfs_filename, &imgfs_file);
+    do_close(&imgfs_file);
     return return_value;
 }
 

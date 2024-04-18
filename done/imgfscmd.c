@@ -40,6 +40,7 @@ int main(int argc, char *argv[])
          * TODO WEEK 07: THIS PART SHALL BE EXTENDED.
          * **********************************************************************
          */
+        const int FOUND = 1, NOT_FOUND = 0;
         command_mapping list = {"list", do_list_cmd};
         command_mapping create = {"create", do_create_cmd};
         command_mapping help_command = {"help", help};
@@ -47,16 +48,16 @@ int main(int argc, char *argv[])
 
         command_mapping commands[NB_COMMANDS] = {list, create, help_command, delete};
         char *current_command = argv[1];
-        int command_found = 0;
+        int command = NOT_FOUND;
         for (int i = 0; i < NB_COMMANDS; i++)
         {
             if (!strcmp(current_command, commands[i].command_name))
             {
-                command_found = 1;
+                command = FOUND;
                 commands[i].command(1, &argv[2]); // call function with one argument corresponding to the second argument of the current process
             } // TODO fct arguments argv + 2 ???
         }
-        if (!command_found)
+        if (command == NOT_FOUND)
         {
             ret = ERR_INVALID_COMMAND;
         }
