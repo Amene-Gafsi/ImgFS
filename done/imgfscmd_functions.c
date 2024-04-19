@@ -31,9 +31,24 @@ int help(int useless _unused, char **useless_too _unused)
      * TODO WEEK 08: WRITE YOUR CODE HERE.
      * **********************************************************************
      */
+    
+    printf("imgfscmd [COMMAND] [ARGUMENTS]\n");
+    printf("  help: displays this help.\n");
+    printf("  list <imgFS_filename>: list imgFS content.\n");
+    printf("  create <imgFS_filename> [options]: create a new imgFS.\n");
+    printf("      options are:\n");
+    printf("          -max_files <MAX_FILES>: maximum number of files.\n");
+    printf("                                  default value is 128\n");
+    printf("                                  maximum value is 4294967295\n");
+    printf("          -thumb_res <X_RES> <Y_RES>: resolution for thumbnail images.\n");
+    printf("                                  default value is 64x64\n");
+    printf("                                  maximum value is 128x128\n");
+    printf("          -small_res <X_RES> <Y_RES>: resolution for small images.\n");
+    printf("                                  default value is 256x256\n");
+    printf("                                  maximum value is 512x512\n");
+    printf("  delete <imgFS_filename> <imgID>: delete image imgID from imgFS.\n");
 
-    TO_BE_IMPLEMENTED();
-    return NOT_IMPLEMENTED;
+    return ERR_NONE;
 }
 
 /**********************************************************************
@@ -78,7 +93,7 @@ int do_list_cmd(int argc, char **argv)
  ********************************************************************** */
 int do_create_cmd(int argc, char **argv)
 {
-    puts("Create");
+    //puts("Create");
     /* **********************************************************************
      * TODO WEEK 08: WRITE YOUR CODE HERE (and change the return if needed).
      * **********************************************************************
@@ -100,40 +115,33 @@ int do_create_cmd(int argc, char **argv)
             {
                 if (i + 1 >= argc)
                     return ERR_NOT_ENOUGH_ARGUMENTS;
-                uint32_t argument_value = atouint32(argv[i + 1]);
-                if (argument_value == 0)
-                    return ERR_INVALID_ARGUMENT;
-                if (argument_value > default_max_files)
-                    return ERR_MAX_FILES;
-                max_files = argument_value;
+                max_files= atouint32(argv[i + 1]);
                 i += 1;
             }
             else if (!strcmp(argv[i], "-thumb_res"))
             {
                 if (i + 2 >= argc)
                     return ERR_NOT_ENOUGH_ARGUMENTS;
-                uint16_t first_argument_value = atouint16(argv[i + 1]), second_argument_value = atouint16(argv[i + 2]);
-                if (first_argument_value <= 0 || first_argument_value > MAX_THUMB_RES || second_argument_value <= 0 || second_argument_value > MAX_THUMB_RES)
-                    return ERR_RESOLUTIONS;
-                thumb_width = first_argument_value;
-                thumb_height = second_argument_value;
+                thumb_width = atouint16(argv[i + 1]);
+                thumb_height = atouint16(argv[i + 2]);
                 i = i + 2;
             }
             else if (!strcmp(argv[i], "-small_res"))
             {
                 if (i + 2 >= argc)
                     return ERR_NOT_ENOUGH_ARGUMENTS;
-                uint16_t first_argument_value = atouint16(argv[i + 1]), second_argument_value = atouint16(argv[i + 2]);
-                if (first_argument_value <= 0 || first_argument_value > MAX_SMALL_RES || second_argument_value <= 0 || second_argument_value > MAX_SMALL_RES)
-                    return ERR_RESOLUTIONS;
-                small_width = first_argument_value;
-                small_height = second_argument_value;
+                small_width = atouint16(argv[i + 1]);
+                small_height = atouint16(argv[i + 2]);
                 i = i + 2;
             }
             else
                 return ERR_INVALID_ARGUMENT;
         }
     }
+    if (max_files == 0) return ERR_INVALID_ARGUMENT; //BUG quand y'a plein d'arguments, retourne erreur que quand dernier probleme
+    if (max_files > default_max_files) return ERR_MAX_FILES;
+    if (thumb_width <= 0 || thumb_width > MAX_THUMB_RES || thumb_height <= 0 || thumb_height > MAX_THUMB_RES) return ERR_RESOLUTIONS;
+    if (small_width <= 0 || small_width > MAX_SMALL_RES || small_height <= 0 || small_height > MAX_SMALL_RES) return ERR_RESOLUTIONS;
 
     struct imgfs_header header = {.max_files = max_files,
                                   .resized_res = {thumb_width, thumb_height, small_width, small_height}};
@@ -155,7 +163,22 @@ int do_delete_cmd(int argc, char **argv)
      * TODO WEEK 08: WRITE YOUR CODE HERE (and change the return if needed).
      * **********************************************************************
      */
+    M_REQUIRE_NON_NULL(argv);
+    if(argc != 2) return ERR_NOT_ENOUGH_ARGUMENTS;
 
-    TO_BE_IMPLEMENTED();
-    return NOT_IMPLEMENTED;
+    const char* filename = argv[0];
+    const char* img_ID = argv[1];
+    if((img_ID == NULL) || (strlen(img_ID) > MAX_IMG_ID)) return ERR_INVALID_IMGID;
+
+    struct imgfs_file imgfs_file;
+    
+    int return_value = ERR_NONE;
+    return_value = do_open(filename, "r+b", &imgfs_file);
+    if (return_value != ERR_NONE) return return_value;
+    
+    return_value = do_delete(img_ID, &imgfs_file);
+    do_close(&imgfs_file);
+
+
+    return return_value;
 }
