@@ -40,7 +40,7 @@ int do_create(const char *imgfs_filename, struct imgfs_file *imgfs_file)
 
     items_written += ONE_MORE_ITEM;
 
-    if (fwrite(imgfs_file->metadata, sizeof(struct img_metadata), ALL_METADATA, imgfs_file->file) != ALL_METADATA)
+    if (fwrite(imgfs_file->metadata, sizeof(*(imgfs_file->metadata)), ALL_METADATA, imgfs_file->file) != ALL_METADATA)
     {
         fclose(imgfs_file->file);
         return ERR_IO;

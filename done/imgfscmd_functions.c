@@ -31,9 +31,24 @@ int help(int useless _unused, char **useless_too _unused)
      * TODO WEEK 08: WRITE YOUR CODE HERE.
      * **********************************************************************
      */
+    
+    printf("imgfscmd [COMMAND] [ARGUMENTS]\n");
+    printf("  help: displays this help.\n");
+    printf("  list <imgFS_filename>: list imgFS content.\n");
+    printf("  create <imgFS_filename> [options]: create a new imgFS.\n");
+    printf("      options are:\n");
+    printf("          -max_files <MAX_FILES>: maximum number of files.\n");
+    printf("                                  default value is 128\n");
+    printf("                                  maximum value is 4294967295\n");
+    printf("          -thumb_res <X_RES> <Y_RES>: resolution for thumbnail images.\n");
+    printf("                                  default value is 64x64\n");
+    printf("                                  maximum value is 128x128\n");
+    printf("          -small_res <X_RES> <Y_RES>: resolution for small images.\n");
+    printf("                                  default value is 256x256\n");
+    printf("                                  maximum value is 512x512\n");
+    printf("  delete <imgFS_filename> <imgID>: delete image imgID from imgFS.\n");
 
-    TO_BE_IMPLEMENTED();
-    return NOT_IMPLEMENTED;
+    return ERR_NONE;
 }
 
 /**********************************************************************
@@ -155,7 +170,23 @@ int do_delete_cmd(int argc, char **argv)
      * TODO WEEK 08: WRITE YOUR CODE HERE (and change the return if needed).
      * **********************************************************************
      */
+    M_REQUIRE_NON_NULL(argv);
+    if(argc != 2) return ERR_NOT_ENOUGH_ARGUMENTS;
 
-    TO_BE_IMPLEMENTED();
-    return NOT_IMPLEMENTED;
+    const char* filename = argv[0];
+    const char* img_ID = argv[1];
+    if((img_ID == NULL) || (strlen(img_ID) > MAX_IMG_ID)) return ERR_INVALID_IMGID;
+
+    struct imgfs_file imgfs_file;
+    int return_value = ERR_NONE;
+
+    return_value = do_open(filename, "wb", &imgfs_file); //TODO return value ERR_PATH_NAME
+    if (return_value != ERR_NONE) return return_value;
+    
+    return_value = do_delete(img_ID, &imgfs_file);
+    if (return_value != ERR_NONE) return return_value;
+
+    do_close(&imgfs_file);
+
+    return return_value;
 }
