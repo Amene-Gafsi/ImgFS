@@ -80,22 +80,26 @@ int do_open(const char *imgfs_filename, const char *open_mode, struct imgfs_file
     M_REQUIRE_NON_NULL(imgfs_file);
 
     imgfs_file->file = fopen(imgfs_filename, open_mode);
-    if (imgfs_file->file == NULL) {
+    if (imgfs_file->file == NULL)
+    {
         return ERR_IO;
     }
 
-    if (fread(&(imgfs_file->header), sizeof(imgfs_file->header), 1, imgfs_file->file) != 1) {  //TODO read header in file
-        fclose(imgfs_file->file); 
+    if (fread(&(imgfs_file->header), sizeof(imgfs_file->header), 1, imgfs_file->file) != 1)
+    {
+        fclose(imgfs_file->file);
         return ERR_IO;
     }
 
     imgfs_file->metadata = calloc(imgfs_file->header.max_files, sizeof(struct img_metadata));
-    if (imgfs_file->metadata == NULL) {
+    if (imgfs_file->metadata == NULL)
+    {
         fclose(imgfs_file->file);
         return ERR_OUT_OF_MEMORY;
     }
 
-    if (fread(imgfs_file->metadata, sizeof(struct img_metadata), imgfs_file->header.max_files, imgfs_file->file) != imgfs_file->header.max_files) {
+    if (fread(imgfs_file->metadata, sizeof(struct img_metadata), imgfs_file->header.max_files, imgfs_file->file) != imgfs_file->header.max_files)
+    {
         free(imgfs_file->metadata);
         fclose(imgfs_file->file);
         return ERR_IO;
@@ -114,7 +118,6 @@ void do_close(struct imgfs_file *imgfs_file)
         if (imgfs_file->file != NULL)
         {
             fclose(imgfs_file->file);
-
         }
         free(imgfs_file->metadata);
     }
