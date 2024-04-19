@@ -14,7 +14,6 @@ int do_create(const char *imgfs_filename, struct imgfs_file *imgfs_file)
     const uint32_t ALL_METADATA = imgfs_file->header.max_files;
 
     strcpy(imgfs_file->header.name, CAT_TXT);
-    imgfs_file->header.name[MAX_IMGFS_NAME] = '\0';
 
     imgfs_file->header.version = 0;
     imgfs_file->header.nb_files = 0;
@@ -46,6 +45,9 @@ int do_create(const char *imgfs_filename, struct imgfs_file *imgfs_file)
         fclose(imgfs_file->file);
         return ERR_IO;
     }
+
+    items_written += ONE_MORE_ITEM; //TODO
+
     // reset pointer
     rewind(imgfs_file->file);
 

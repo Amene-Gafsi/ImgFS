@@ -142,7 +142,7 @@ int do_create_cmd(int argc, char **argv)
     imgfs_file.header = header;
 
     int return_value = do_create(imgfs_filename, &imgfs_file);
-    do_close(&imgfs_file);
+    if (return_value == ERR_NONE) do_close(&imgfs_file);
     return return_value;
 }
 
