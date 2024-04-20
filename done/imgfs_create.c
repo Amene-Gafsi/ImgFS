@@ -10,20 +10,20 @@ int do_create(const char *imgfs_filename, struct imgfs_file *imgfs_file)
 {
     M_REQUIRE_NON_NULL(imgfs_filename);
     M_REQUIRE_NON_NULL(imgfs_file);
-    const size_t ALL__HEADER = 1, ONE_MORE_ITEM = 1, NO_ITEM = 0;
+    const size_t ALL__HEADER = 1;
     const uint32_t ALL_METADATA = imgfs_file->header.max_files;
 
     strcpy(imgfs_file->header.name, CAT_TXT);
 
-    imgfs_file->header.version = 0;
-    imgfs_file->header.nb_files = 0;
-    imgfs_file->header.unused_32 = 0;
-    imgfs_file->header.unused_64 = 0;
+    imgfs_file->header.version = EMPTY;
+    imgfs_file->header.nb_files = EMPTY;
+    imgfs_file->header.unused_32 = EMPTY;
+    imgfs_file->header.unused_64 = EMPTY;
 
     imgfs_file->metadata = calloc(ALL_METADATA, sizeof(struct img_metadata));
     if (imgfs_file->metadata == NULL)
         return ERR_OUT_OF_MEMORY;
-    size_t items_written = NO_ITEM;
+    size_t items_written = EMPTY;
 
     // write imgfs_file to imgfs_filename in database
     FILE *imgfs = fopen(imgfs_filename, "wb");
@@ -32,13 +32,13 @@ int do_create(const char *imgfs_filename, struct imgfs_file *imgfs_file)
 
     imgfs_file->file = imgfs;
 
-    if (fwrite(&(imgfs_file->header), sizeof(imgfs_file->header), 1, imgfs_file->file) != ALL__HEADER)
+    if (fwrite(&(imgfs_file->header), sizeof(imgfs_file->header), ALL__HEADER, imgfs_file->file) != ALL__HEADER)
     {
         fclose(imgfs_file->file);
         return ERR_IO;
     }
 
-    items_written += ONE_MORE_ITEM;
+    items_written++;
 
     if (fwrite(imgfs_file->metadata, sizeof(*(imgfs_file->metadata)), ALL_METADATA, imgfs_file->file) != ALL_METADATA)
     {
@@ -46,7 +46,7 @@ int do_create(const char *imgfs_filename, struct imgfs_file *imgfs_file)
         return ERR_IO;
     }
 
-    items_written += ONE_MORE_ITEM; //TODO
+    items_written++; //TODO correct ?
 
     // reset pointer
     rewind(imgfs_file->file);

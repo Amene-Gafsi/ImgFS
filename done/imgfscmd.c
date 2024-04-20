@@ -53,16 +53,16 @@ int main(int argc, char *argv[])
         {
             if (!strcmp(current_command, commands[i].command_name))
             {
-                command = FOUND;
-                commands[i].command(1, &argv[2]); // call function with one argument corresponding to the second argument of the current process
-            } // TODO fct arguments argv + 2 ???
+                command = FOUND;  
+                ret = commands[i].command(argc-2, argv+2); // call function with one argument corresponding to the second argument of the current process
+            } // TODO fct arguments argv + 2 ???  //BUG added ret = pour afficher help en cas de prblm
         }
         if (command == NOT_FOUND)
         {
             ret = ERR_INVALID_COMMAND;
         }
-        argc--;
-        argv++; // skips command call name
+        //argc--;
+        //argv++; // skips command call name
     }
 
     if (ret)

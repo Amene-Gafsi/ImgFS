@@ -93,7 +93,7 @@ int do_list_cmd(int argc, char **argv)
  ********************************************************************** */
 int do_create_cmd(int argc, char **argv)
 {
-    puts("Create");
+    //puts("Create");
     /* **********************************************************************
      * TODO WEEK 08: WRITE YOUR CODE HERE (and change the return if needed).
      * **********************************************************************
@@ -115,40 +115,33 @@ int do_create_cmd(int argc, char **argv)
             {
                 if (i + 1 >= argc)
                     return ERR_NOT_ENOUGH_ARGUMENTS;
-                uint32_t argument_value = atouint32(argv[i + 1]);
-                if (argument_value == 0)
-                    return ERR_INVALID_ARGUMENT;
-                if (argument_value > default_max_files)
-                    return ERR_MAX_FILES;
-                max_files = argument_value;
+                max_files= atouint32(argv[i + 1]);
                 i += 1;
             }
             else if (!strcmp(argv[i], "-thumb_res"))
             {
                 if (i + 2 >= argc)
                     return ERR_NOT_ENOUGH_ARGUMENTS;
-                uint16_t first_argument_value = atouint16(argv[i + 1]), second_argument_value = atouint16(argv[i + 2]);
-                if (first_argument_value <= 0 || first_argument_value > MAX_THUMB_RES || second_argument_value <= 0 || second_argument_value > MAX_THUMB_RES)
-                    return ERR_RESOLUTIONS;
-                thumb_width = first_argument_value;
-                thumb_height = second_argument_value;
+                thumb_width = atouint16(argv[i + 1]);
+                thumb_height = atouint16(argv[i + 2]);
                 i = i + 2;
             }
             else if (!strcmp(argv[i], "-small_res"))
             {
                 if (i + 2 >= argc)
                     return ERR_NOT_ENOUGH_ARGUMENTS;
-                uint16_t first_argument_value = atouint16(argv[i + 1]), second_argument_value = atouint16(argv[i + 2]);
-                if (first_argument_value <= 0 || first_argument_value > MAX_SMALL_RES || second_argument_value <= 0 || second_argument_value > MAX_SMALL_RES)
-                    return ERR_RESOLUTIONS;
-                small_width = first_argument_value;
-                small_height = second_argument_value;
+                small_width = atouint16(argv[i + 1]);
+                small_height = atouint16(argv[i + 2]);
                 i = i + 2;
             }
             else
                 return ERR_INVALID_ARGUMENT;
         }
     }
+    if (max_files == 0) return ERR_INVALID_ARGUMENT; //BUG quand y'a plein d'arguments, retourne erreur que quand dernier probleme
+    if (max_files > default_max_files) return ERR_MAX_FILES;
+    if (thumb_width <= 0 || thumb_width > MAX_THUMB_RES || thumb_height <= 0 || thumb_height > MAX_THUMB_RES) return ERR_RESOLUTIONS;
+    if (small_width <= 0 || small_width > MAX_SMALL_RES || small_height <= 0 || small_height > MAX_SMALL_RES) return ERR_RESOLUTIONS;
 
     struct imgfs_header header = {.max_files = max_files,
                                   .resized_res = {thumb_width, thumb_height, small_width, small_height}};
@@ -178,15 +171,14 @@ int do_delete_cmd(int argc, char **argv)
     if((img_ID == NULL) || (strlen(img_ID) > MAX_IMG_ID)) return ERR_INVALID_IMGID;
 
     struct imgfs_file imgfs_file;
+    
     int return_value = ERR_NONE;
-
-    return_value = do_open(filename, "wb", &imgfs_file); //TODO return value ERR_PATH_NAME
+    return_value = do_open(filename, "r+b", &imgfs_file);
     if (return_value != ERR_NONE) return return_value;
     
     return_value = do_delete(img_ID, &imgfs_file);
-    if (return_value != ERR_NONE) return return_value;
-
     do_close(&imgfs_file);
+
 
     return return_value;
 }
