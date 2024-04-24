@@ -11,10 +11,10 @@
 
 # Note: builds with address sanitizer by default
 
-TEST_DIR = $(PWD)/tests
+TEST_DIR = $(PWD)/../provided/tests
 
 ## You can change the tag to run week07, week08, etc.
-IMAGE := chappeli/cs202-feedback:week08
+IMAGE := chappeli/cs202-feedback:latest
 
 #########################################################################
 # DO NOT EDIT BELOW THIS LINE
@@ -183,6 +183,12 @@ clean-fake-ssh:
 feedback-VM-CO: clone-ssh feedback clean-fake-ssh
 
 feedback-debug-VM-CO: clone-ssh feedback-debug clean-fake-ssh
+
+# Add options for the compiler to include the library's headers
+CFLAGS += $(shell pkg-config vips --cflags)
+
+# Add the library to the linker
+LDLIBS += $(shell pkg-config vips --libs)
 
 ## ======================================================================
 ## Submit

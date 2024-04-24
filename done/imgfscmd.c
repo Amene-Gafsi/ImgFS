@@ -28,6 +28,8 @@ typedef struct
 
 int main(int argc, char *argv[])
 {
+    VIPS_INIT(argv[0]);
+
     int ret = 0;
 
     if (argc < 2)
@@ -53,16 +55,14 @@ int main(int argc, char *argv[])
         {
             if (!strcmp(current_command, commands[i].command_name))
             {
-                command = FOUND;  
-                ret = commands[i].command(argc-2, argv+2); // call function with one argument corresponding to the second argument of the current process
-            } // TODO fct arguments argv + 2 ???  //BUG added ret = pour afficher help en cas de prblm
+                command = FOUND;
+                ret = commands[i].command(argc - 2, argv + 2); // call function with one argument corresponding to the second argument of the current process
+            }
         }
         if (command == NOT_FOUND)
         {
             ret = ERR_INVALID_COMMAND;
         }
-        //argc--;
-        //argv++; // skips command call name
     }
 
     if (ret)
