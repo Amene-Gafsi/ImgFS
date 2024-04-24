@@ -1,9 +1,7 @@
 #include "image_content.h"
 #include "imgfs.h"
-#include <vips/vips8>
+#include <vips/vips.h>
 #include <stdlib.h>
-#include <string.h>
-#include <cstring>
 #include <stdio.h>
 
 int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
@@ -29,7 +27,8 @@ int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
     // Resize image
     uint16_t width = (resolution == THUMB_RES) ? imgfs_file->header.resized_res[THUMB_RES] : imgfs_file->header.resized_res[SMALL_RES];
 
-    VipsImage *vips_orig_img = NULL, vips_resized_img = NULL;
+    VipsImage *vips_orig_img = NULL;
+    VipsImage *vips_resized_img = NULL;
     void *resized_img = NULL;
 
     void *orig_img = calloc(1, indexed_metadata.size[ORIG_RES]);
@@ -43,7 +42,7 @@ int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
     {
         if (fread(orig_img, indexed_metadata.size[ORIG_RES], 1, imgfs_file->file) == 1)
         {
-            if (vips_jpegload_buffer(image, indexed_metadata.size[ORIG_RES], &vips_orig_img, null_ptr) == 0)
+            if (vips_jpegload_buffer(orig_img, indexed_metadata.size[ORIG_RES], &vips_orig_img, null_ptr) == 0)
             {
                 if (vips_thumbnail_image(vips_orig_img, &vips_resized_img, width, null_ptr) == 0)
                 {
@@ -58,7 +57,7 @@ int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
                                 int end_of_file = ftell(imgfs_file->file); // ftell returns the current position in the file which is the end of the file because of the use of SEEK_END when writing
                                 if (end_of_file != -1)
                                 {
-                                    indexed_metadata.offset = end_of_file - len;
+                                    indexed_metadata.offset[resolution] = end_of_file - len;
                                     if (fwrite(imgfs_file->metadata, sizeof(*(imgfs_file->metadata)), 1, imgfs_file->file) == 1)
                                     {
                                         ret = ERR_NONE;
