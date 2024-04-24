@@ -13,7 +13,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <vips/vips8>  //TODO 
+#include <vips/vips.h>  //TODO 
 
 #define NB_COMMANDS 4
 
