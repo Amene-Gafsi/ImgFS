@@ -138,7 +138,7 @@ int do_create_cmd(int argc, char **argv)
                 return ERR_INVALID_ARGUMENT;
         }
     }
-    if (max_files == 0) return ERR_INVALID_ARGUMENT; //BUG quand y'a plein d'arguments, retourne erreur que quand dernier probleme
+    if (max_files == 0) return ERR_INVALID_ARGUMENT;
     if (max_files > default_max_files) return ERR_MAX_FILES;
     if (thumb_width <= 0 || thumb_width > MAX_THUMB_RES || thumb_height <= 0 || thumb_height > MAX_THUMB_RES) return ERR_RESOLUTIONS;
     if (small_width <= 0 || small_width > MAX_SMALL_RES || small_height <= 0 || small_height > MAX_SMALL_RES) return ERR_RESOLUTIONS;
