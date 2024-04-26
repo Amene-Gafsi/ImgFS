@@ -13,9 +13,11 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <vips/vips.h>  //TODO 
+#include <vips/vips.h>
 
 #define NB_COMMANDS 4
+#define COMMAND_CALL_NAME 0
+#define FIRST_ARG 1
 
 /*******************************************************************************
  * MAIN
@@ -29,7 +31,7 @@ typedef struct
 
 int main(int argc, char *argv[])
 {
-    VIPS_INIT(argv[0]);
+    VIPS_INIT(argv[COMMAND_CALL_NAME]);
     int ret = 0;
 
     if (argc < 2)
@@ -42,27 +44,29 @@ int main(int argc, char *argv[])
          * TODO WEEK 07: THIS PART SHALL BE EXTENDED.
          * **********************************************************************
          */
-        const int FOUND = 1, NOT_FOUND = 0;
-        command_mapping list = {"list", do_list_cmd};
-        command_mapping create = {"create", do_create_cmd};
-        command_mapping help_command = {"help", help};
-        command_mapping delete = {"delete", do_delete_cmd};
+        command_mapping list = {"list", do_list_cmd},
+                        create = {"create", do_create_cmd},
+                        help_command = {"help", help},
+                        delete = {"delete", do_delete_cmd};
 
         command_mapping commands[NB_COMMANDS] = {list, create, help_command, delete};
-        char *current_command = argv[1];
+        char *current_command = argv[FIRST_ARG];
         int command = NOT_FOUND;
+
+        // Iterate through all commands, and if valid call corresponding function
         for (int i = 0; i < NB_COMMANDS; i++)
         {
             if (!strcmp(current_command, commands[i].command_name))
             {
                 command = FOUND;
-                ret = commands[i].command(argc - 2, argv + 2); // call function with one argument corresponding to the second argument of the current process
+                ret = commands[i].command(argc - 2, argv + 2); // Call function with one argument corresponding to the second argument of the current process
             }
         }
         if (command == NOT_FOUND)
         {
             ret = ERR_INVALID_COMMAND;
         }
+        // argc--;  argv++; // skips command call name
     }
 
     if (ret)

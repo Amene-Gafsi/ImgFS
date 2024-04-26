@@ -3,55 +3,61 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define ONE_ELEMENT 1
+
 /**********************************************************************
  * Creates a new database for the imgfs format.
  ********************************************************************** */
 int do_create(const char *imgfs_filename, struct imgfs_file *imgfs_file)
 {
+    // Check if arguments are valid
     M_REQUIRE_NON_NULL(imgfs_filename);
     M_REQUIRE_NON_NULL(imgfs_file);
-    const size_t ALL__HEADER = 1;
-    const uint32_t ALL_METADATA = imgfs_file->header.max_files;
 
+    // Initialize the header
     strcpy(imgfs_file->header.name, CAT_TXT);
-
     imgfs_file->header.version = EMPTY;
     imgfs_file->header.nb_files = EMPTY;
     imgfs_file->header.unused_32 = EMPTY;
     imgfs_file->header.unused_64 = EMPTY;
 
-    imgfs_file->metadata = calloc(ALL_METADATA, sizeof(struct img_metadata));
+    imgfs_file->metadata = calloc(imgfs_file->header.max_files, sizeof(struct img_metadata));
     if (imgfs_file->metadata == NULL)
         return ERR_OUT_OF_MEMORY;
+
     size_t items_written = EMPTY;
 
-    // write imgfs_file to imgfs_filename in database
+    // Write the imgfs_file to the file, whose path is given by imgfs_filename, in the database
     FILE *imgfs = fopen(imgfs_filename, "wb");
     if (imgfs == NULL)
         return ERR_INVALID_ARGUMENT;
 
     imgfs_file->file = imgfs;
 
-    if (fwrite(&(imgfs_file->header), sizeof(imgfs_file->header), ALL__HEADER, imgfs_file->file) != ALL__HEADER)
+    if (fwrite(&(imgfs_file->header), sizeof(struct imgfs_header), ONE_ELEMENT, imgfs_file->file) != ONE_ELEMENT)
     {
         fclose(imgfs_file->file);
         return ERR_IO;
     }
 
     items_written++;
+    int ret = ERR_NONE;
 
-    if (fwrite(imgfs_file->metadata, sizeof(*(imgfs_file->metadata)), ALL_METADATA, imgfs_file->file) != ALL_METADATA)
+    if (fwrite(imgfs_file->metadata, sizeof(struct img_metadata), imgfs_file->header.max_files, imgfs_file->file) != imgfs_file->header.max_files)
     {
         fclose(imgfs_file->file);
-        return ERR_IO;
+        ret = ERR_IO;
     }
 
-    items_written++; //TODO correct ?
+    if (ret == ERR_NONE)
+    {
+        items_written += imgfs_file->header.max_files; // TODO
+    }
 
-    // reset pointer
+    // Reset pointer
     rewind(imgfs_file->file);
 
-    // print number of elements written
+    // Print number of elements written
     printf("%zu item(s) written\n", items_written);
-    return ERR_NONE;
+    return ret;
 }

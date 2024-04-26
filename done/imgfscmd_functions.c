@@ -22,6 +22,15 @@ static const uint16_t default_small_res = 256;
 static const uint16_t MAX_THUMB_RES = 128;
 static const uint16_t MAX_SMALL_RES = 512;
 
+#define FILE_NAME_INDEX 0
+#define IMG_ID_INDEX 1
+
+// The number of arguments for max_files, thumb_res and small_res
+#define MAX_FILES_ARG 1
+#define WIDTH_AND_HEIGHT_ARGS 2
+
+#define TWO_ELEMENTS 2
+
 /**********************************************************************
  * Displays some explanations.
  ********************************************************************** */
@@ -31,7 +40,7 @@ int help(int useless _unused, char **useless_too _unused)
      * TODO WEEK 08: WRITE YOUR CODE HERE.
      * **********************************************************************
      */
-    
+
     printf("imgfscmd [COMMAND] [ARGUMENTS]\n");
     printf("  help: displays this help.\n");
     printf("  list <imgFS_filename>: list imgFS content.\n");
@@ -60,32 +69,33 @@ int do_list_cmd(int argc, char **argv)
      * TODO WEEK 07: WRITE YOUR CODE HERE.
      * **********************************************************************
      */
-    if (argv == NULL)
-        return ERR_INVALID_ARGUMENT;
 
-    if (argc != 1)
+    // Check if arguments are valid
+    M_REQUIRE_NON_NULL(argv);
+
+    if (argc != ONE_ELEMENT)
         return ERR_INVALID_COMMAND;
 
-    const char *file_name = argv[0];
+    const char *file_name = argv[FILE_NAME_INDEX];
+    M_REQUIRE_NON_NULL(file_name);
 
-    if (file_name == NULL)
-        return ERR_INVALID_ARGUMENT;
-    int return_value = ERR_NONE;
+    int ret = ERR_NONE;
 
+    // Create a new imgfs_file and initialize its content to zero
     struct imgfs_file file_to_create;
     memset(&file_to_create, 0, sizeof(file_to_create));
 
-    return_value = do_open(file_name, "rb", &file_to_create);
-    if (return_value != ERR_NONE)
-        return return_value;
+    ret = do_open(file_name, "rb", &file_to_create);
+    if (ret != ERR_NONE)
+        return ret;
 
-    return_value = do_list(&file_to_create, STDOUT, NULL);
-    if (return_value != ERR_NONE)
-        return return_value;
+    ret = do_list(&file_to_create, STDOUT, NULL);
+    if (ret != ERR_NONE)
+        return ret;
 
     do_close(&file_to_create);
 
-    return return_value;
+    return ret;
 }
 
 /**********************************************************************
@@ -93,55 +103,64 @@ int do_list_cmd(int argc, char **argv)
  ********************************************************************** */
 int do_create_cmd(int argc, char **argv)
 {
-    //puts("Create");
+    // puts("Create");
     /* **********************************************************************
      * TODO WEEK 08: WRITE YOUR CODE HERE (and change the return if needed).
      * **********************************************************************
      */
+
+    // Check if arguments are valid
     M_REQUIRE_NON_NULL(argv);
-    if (argc == 0)
+    if (argc == EMPTY)
         return ERR_NOT_ENOUGH_ARGUMENTS;
 
-    const char *imgfs_filename = argv[0];
+    const char *imgfs_filename = argv[FILE_NAME_INDEX];
     uint32_t max_files = default_max_files;
     uint16_t thumb_width = default_thumb_res, thumb_height = default_thumb_res,
              small_width = default_small_res, small_height = default_small_res;
 
-    if (argc > 1)
+    if (argc > ONE_ELEMENT)
     {
         for (int i = 1; i < argc; i++)
         {
             if (!strcmp(argv[i], "-max_files"))
             {
-                if (i + 1 >= argc)
+                // Make sure that the "max_files" value is present
+                if (i + MAX_FILES_ARG >= argc)
                     return ERR_NOT_ENOUGH_ARGUMENTS;
-                max_files= atouint32(argv[i + 1]);
-                i += 1;
+                max_files = atouint32(argv[i + 1]);
+                i += ONE_ELEMENT; // Skip the next argument, since it's the max_files value
             }
             else if (!strcmp(argv[i], "-thumb_res"))
             {
-                if (i + 2 >= argc)
+                // Make sure that the "thumb_res" values are present
+                if (i + WIDTH_AND_HEIGHT_ARGS >= argc)
                     return ERR_NOT_ENOUGH_ARGUMENTS;
-                thumb_width = atouint16(argv[i + 1]);
-                thumb_height = atouint16(argv[i + 2]);
-                i = i + 2;
+                thumb_width = atouint16(argv[i + 1]);  // Get width value
+                thumb_height = atouint16(argv[i + 2]); // Get height value
+                i += TWO_ELEMENTS;
             }
             else if (!strcmp(argv[i], "-small_res"))
             {
-                if (i + 2 >= argc)
+                // Make sure that the "small_res" values are present
+                if (i + WIDTH_AND_HEIGHT_ARGS >= argc)
                     return ERR_NOT_ENOUGH_ARGUMENTS;
                 small_width = atouint16(argv[i + 1]);
                 small_height = atouint16(argv[i + 2]);
-                i = i + 2;
+                i += TWO_ELEMENTS;
             }
             else
                 return ERR_INVALID_ARGUMENT;
         }
     }
-    if (max_files == 0) return ERR_INVALID_ARGUMENT;
-    if (max_files > default_max_files) return ERR_MAX_FILES;
-    if (thumb_width <= 0 || thumb_width > MAX_THUMB_RES || thumb_height <= 0 || thumb_height > MAX_THUMB_RES) return ERR_RESOLUTIONS;
-    if (small_width <= 0 || small_width > MAX_SMALL_RES || small_height <= 0 || small_height > MAX_SMALL_RES) return ERR_RESOLUTIONS;
+    if (max_files == 0)
+        return ERR_INVALID_ARGUMENT;
+    if (max_files > default_max_files)
+        return ERR_MAX_FILES;
+    if (thumb_width <= 0 || thumb_width > MAX_THUMB_RES || thumb_height <= 0 || thumb_height > MAX_THUMB_RES)
+        return ERR_RESOLUTIONS;
+    if (small_width <= 0 || small_width > MAX_SMALL_RES || small_height <= 0 || small_height > MAX_SMALL_RES)
+        return ERR_RESOLUTIONS;
 
     struct imgfs_header header = {.max_files = max_files,
                                   .resized_res = {thumb_width, thumb_height, small_width, small_height}};
@@ -150,7 +169,8 @@ int do_create_cmd(int argc, char **argv)
     imgfs_file.header = header;
 
     int return_value = do_create(imgfs_filename, &imgfs_file);
-    if (return_value == ERR_NONE) do_close(&imgfs_file);
+    if (return_value == ERR_NONE)
+        do_close(&imgfs_file);
     return return_value;
 }
 
@@ -163,22 +183,26 @@ int do_delete_cmd(int argc, char **argv)
      * TODO WEEK 08: WRITE YOUR CODE HERE (and change the return if needed).
      * **********************************************************************
      */
-    M_REQUIRE_NON_NULL(argv);
-    if(argc != 2) return ERR_NOT_ENOUGH_ARGUMENTS;
 
-    const char* filename = argv[0];
-    const char* img_ID = argv[1];
-    if((img_ID == NULL) || (strlen(img_ID) > MAX_IMG_ID)) return ERR_INVALID_IMGID;
+    // Check if arguments are valid
+    M_REQUIRE_NON_NULL(argv);
+    if (argc != TWO_ELEMENTS)
+        return ERR_NOT_ENOUGH_ARGUMENTS;
+
+    const char *filename = argv[FILE_NAME_INDEX];
+    const char *img_ID = argv[IMG_ID_INDEX];
+    if ((img_ID == NULL) || (strlen(img_ID) > MAX_IMG_ID))
+        return ERR_INVALID_IMGID;
 
     struct imgfs_file imgfs_file;
+    int ret = ERR_NONE;
     
-    int return_value = ERR_NONE;
-    return_value = do_open(filename, "r+b", &imgfs_file);
-    if (return_value != ERR_NONE) return return_value;
-    
-    return_value = do_delete(img_ID, &imgfs_file);
+    ret = do_open(filename, "r+b", &imgfs_file);
+    if (ret != ERR_NONE)
+        return ret;
+
+    ret = do_delete(img_ID, &imgfs_file);
     do_close(&imgfs_file);
 
-
-    return return_value;
+    return ret;
 }

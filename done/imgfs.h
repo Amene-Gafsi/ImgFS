@@ -40,6 +40,10 @@
 #define ORIG_RES  2
 #define NB_RES    3
 
+#define ONE_ELEMENT 1
+#define FOUND       1
+#define NOT_FOUND   0
+
 #ifdef __cplusplus
 extern "C" {
 #endif
