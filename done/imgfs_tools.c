@@ -72,9 +72,9 @@ ORIGINAL: %" PRIu32 " x %" PRIu32 "\n",
 /*******************************************************************
  * Open imgfs files.
  */
-
 int do_open(const char *imgfs_filename, const char *open_mode, struct imgfs_file *imgfs_file)
 {
+    // Check if arguments are valid
     M_REQUIRE_NON_NULL(imgfs_filename);
     M_REQUIRE_NON_NULL(open_mode);
     M_REQUIRE_NON_NULL(imgfs_file);
@@ -85,7 +85,7 @@ int do_open(const char *imgfs_filename, const char *open_mode, struct imgfs_file
         return ERR_IO;
     }
 
-    if (fread(&(imgfs_file->header), sizeof(imgfs_file->header), 1, imgfs_file->file) != 1)
+    if (fread(&(imgfs_file->header), sizeof(struct imgfs_header), ONE_ELEMENT, imgfs_file->file) != ONE_ELEMENT)
     {
         fclose(imgfs_file->file);
         return ERR_IO;
@@ -100,6 +100,7 @@ int do_open(const char *imgfs_filename, const char *open_mode, struct imgfs_file
 
     if (fread(imgfs_file->metadata, sizeof(struct img_metadata), imgfs_file->header.max_files, imgfs_file->file) != imgfs_file->header.max_files)
     {
+        // Free allocated metadata and close the file in case of an error
         free(imgfs_file->metadata);
         fclose(imgfs_file->file);
         return ERR_IO;

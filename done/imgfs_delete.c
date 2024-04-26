@@ -11,14 +11,17 @@
  ********************************************************************** */
 int do_delete(const char *img_id, struct imgfs_file *imgfs_file)
 {
+    // Check if arguments are valid
     M_REQUIRE_NON_NULL(img_id);
     M_REQUIRE_NON_NULL(imgfs_file);
-    const int FOUND = 1, NOT_FOUND = 0;
-    int image = NOT_FOUND;
-    struct imgfs_header header = imgfs_file->header; // Make a copy of header and metadata
-    struct img_metadata *metadata = calloc(imgfs_file->header.max_files, sizeof(struct img_metadata));
-    memcpy(metadata, imgfs_file->metadata, imgfs_file->header.max_files * sizeof(struct img_metadata));
 
+    int image = NOT_FOUND;
+
+    // Make a copy of header and metadata
+    struct imgfs_header header = imgfs_file->header;
+    struct img_metadata *metadata = calloc(imgfs_file->header.max_files, sizeof(struct img_metadata));
+
+    memcpy(metadata, imgfs_file->metadata, imgfs_file->header.max_files * sizeof(struct img_metadata));
     if (metadata == NULL)
     {
         return ERR_OUT_OF_MEMORY; // Ensure memory allocation succeeded
@@ -45,12 +48,12 @@ int do_delete(const char *img_id, struct imgfs_file *imgfs_file)
         return ERR_IMAGE_NOT_FOUND;
     }
 
-    // reset pointer
+    // Reset pointer
     rewind(imgfs_file->file);
 
-    if (fwrite(&(header), sizeof(header), 1, imgfs_file->file) == 1)
+    if (fwrite(&(header), sizeof(struct imgfs_header), 1, imgfs_file->file) == 1)
     {
-        if (fwrite(metadata, sizeof(*metadata), imgfs_file->header.max_files, imgfs_file->file) == imgfs_file->header.max_files)
+        if (fwrite(metadata, sizeof(struct img_metadata), imgfs_file->header.max_files, imgfs_file->file) == imgfs_file->header.max_files)
         {
             imgfs_file->header = header; // If the write succeeds (correct open mode), paste the copy in the imgfs_file
             free(imgfs_file->metadata);

@@ -2,12 +2,16 @@
 #include <stdio.h>
 #include "util.h"
 
+/**********************************************************************
+ * Displays the imgFS metadata on stdout
+ ********************************************************************** */
 int do_list(const struct imgfs_file *imgfs_file, enum do_list_mode output_mode, char **json)
 {
-    if (imgfs_file == NULL)
-        return ERR_INVALID_ARGUMENT;
+    // Check if arguments are valid
+    M_REQUIRE_NON_NULL(imgfs_file);
 
-    int exist_image = 0;
+    int images = NOT_FOUND;
+
     if (output_mode == STDOUT)
     {
         print_header(&(imgfs_file->header));
@@ -19,12 +23,12 @@ int do_list(const struct imgfs_file *imgfs_file, enum do_list_mode output_mode, 
                 if ((imgfs_file->metadata)[i].is_valid)
                 {
                     print_metadata(&(imgfs_file->metadata)[i]);
-                    exist_image += 1;
+                    images++;
                 }
             }
         }
-        if (exist_image == 0)
-            printf("<< empty imgFS >>");
+        if (images == NOT_FOUND)
+            printf("<< empty imgFS >>\n");
         return ERR_NONE;
     }
     else if (output_mode == JSON)
