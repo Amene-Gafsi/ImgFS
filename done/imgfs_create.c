@@ -51,7 +51,7 @@ int do_create(const char *imgfs_filename, struct imgfs_file *imgfs_file)
 
     if (ret == ERR_NONE)
     {
-        items_written += imgfs_file->header.max_files; // TODO
+        items_written += imgfs_file->header.max_files; 
     }
 
     // Reset pointer

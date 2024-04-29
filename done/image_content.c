@@ -106,11 +106,11 @@ int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
         free(orig_img);
         free(resized_img);
         g_object_unref(vips_orig_img);
-        g_object_unref(vips_resized_img);
+        g_object_unref(vips_resized_img);  //TODO : function for duplicated code
         return ERR_IO;
     }
 
-    imgfs_file->metadata[index].offset[resolution] = (uint64_t)end_of_file - len;
+    imgfs_file->metadata[index].offset[resolution] = (uint64_t)(end_of_file - len);
 
     if (fseek(imgfs_file->file, sizeof(imgfs_file->header), SEEK_SET))
     {
@@ -120,8 +120,8 @@ int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
         g_object_unref(vips_resized_img);
         return ERR_IO;
     }
-
-    if (fwrite(imgfs_file->metadata, sizeof(struct img_metadata), imgfs_file->header.max_files, imgfs_file->file) != imgfs_file->header.max_files) // TODO maxfiles ou 1
+    // TODO indexed_metadata 
+    if (fwrite(imgfs_file->metadata, sizeof(struct img_metadata), imgfs_file->header.max_files, imgfs_file->file) != imgfs_file->header.max_files) 
     {
         free(orig_img);
         free(resized_img);
