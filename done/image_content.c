@@ -14,7 +14,7 @@
 #define OFFSET_ZERO 0
 
 /**
- * @brief Free memory allocated to the original and resized images, as well as their corresponding VipsImages
+ * @brief Free memory allocated to the original and resized images, as well as their corresponding VipsImage
  *
  * @param original_image Pointer to the original image
  * @param resized_image Pointer to the resized image

@@ -196,7 +196,7 @@ int do_delete_cmd(int argc, char **argv)
 
     struct imgfs_file imgfs_file;
     int ret = ERR_NONE;
-    
+
     ret = do_open(filename, "r+b", &imgfs_file);
     if (ret != ERR_NONE)
         return ret;

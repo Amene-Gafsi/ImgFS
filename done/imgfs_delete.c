@@ -49,7 +49,7 @@ int do_delete(const char *img_id, struct imgfs_file *imgfs_file)
     }
 
     // Changes are made first to the metadata (memory, then disk), then to the header if successful
-    free(imgfs_file->metadata);  // Free previous metadata
+    free(imgfs_file->metadata); // Free previous metadata
     imgfs_file->metadata = metadata;
 
     if (!fseek(imgfs_file->file, sizeof(struct imgfs_header), SEEK_SET))
