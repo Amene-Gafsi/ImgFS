@@ -17,7 +17,7 @@ int do_delete(const char *img_id, struct imgfs_file *imgfs_file)
 
     int image = NOT_FOUND;
 
-    // Make a copy of header and metadata
+    // Make a copy of header and metadata //TODO : why make a copy and don't we also update the metadata first and then update the file?
     struct imgfs_header header = imgfs_file->header;
     struct img_metadata *metadata = calloc(imgfs_file->header.max_files, sizeof(struct img_metadata));
 
