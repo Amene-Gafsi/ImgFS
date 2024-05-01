@@ -13,11 +13,30 @@
 
 #define OFFSET_ZERO 0
 
+/**
+ * @brief Free memory allocated to the original and resized images, as well as their corresponding VipsImages
+ *
+ * @param original_image Pointer to the original image
+ * @param resized_image Pointer to the resized image
+ * @param original_vipsimage Pointer to the original VipsImage
+ * @param resized_vipsimage Pointer to the resized VipsImage
+ *
+ * @return some error code
+ */
+int free_images(void *original_image, void *resized_image, VipsImage *original_vipsimage, VipsImage *resized_vipsimage)
+{
+    free(original_image);
+    free(resized_image);
+    g_object_unref(original_vipsimage);
+    g_object_unref(resized_vipsimage);
+    return ERR_NONE;
+}
+
 /**********************************************************************
  * Resize the image to the given resolution, if needed.
  ********************************************************************** */
 int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
-{   // Check if arguments are valid
+{ // Check if arguments are valid
     if (resolution != THUMB_RES && resolution != SMALL_RES && resolution != ORIG_RES)
         return ERR_INVALID_ARGUMENT;
 
@@ -26,38 +45,35 @@ int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
 
     if (index < 0 || index >= imgfs_file->header.max_files)
         return ERR_INVALID_IMGID;
-    
-    // Create a copy of the metadata at the given index
-    struct img_metadata indexed_metadata = imgfs_file->metadata[index];
 
-    if (!indexed_metadata.is_valid)
+    if (!imgfs_file->metadata[index].is_valid)
         return ERR_INVALID_IMGID;
 
     if (resolution == ORIG_RES)
         return ERR_NONE;
 
     // Check if image already exists in given resolution
-    if (indexed_metadata.size[resolution])
+    if (imgfs_file->metadata[index].size[resolution])
         return ERR_NONE;
 
     // Find the correct width according to the resolution
     uint16_t width = (resolution == THUMB_RES) ? imgfs_file->header.resized_res[THUMB_RES_WIDTH_INDEX] : imgfs_file->header.resized_res[SMALL_RES_WIDTH_INDEX];
 
-    if (fseek(imgfs_file->file, (long)indexed_metadata.offset[ORIG_RES], SEEK_SET))
+    if (fseek(imgfs_file->file, (long)imgfs_file->metadata[index].offset[ORIG_RES], SEEK_SET))
     {
         return ERR_IO;
     }
 
     // Resize the original image to the requested resolution and free allocated memory in case of error
-    void *orig_img = calloc(1, indexed_metadata.size[ORIG_RES]);
-    if (fread(orig_img, indexed_metadata.size[ORIG_RES], ONE_ELEMENT, imgfs_file->file) != ONE_ELEMENT)
+    void *orig_img = calloc(1, imgfs_file->metadata[index].size[ORIG_RES]);
+    if (fread(orig_img, imgfs_file->metadata[index].size[ORIG_RES], ONE_ELEMENT, imgfs_file->file) != ONE_ELEMENT)
     {
         free(orig_img);
         return ERR_IO;
     }
 
     VipsImage *vips_orig_img = NULL;
-    if (vips_jpegload_buffer(orig_img, indexed_metadata.size[ORIG_RES], &vips_orig_img, NULL))
+    if (vips_jpegload_buffer(orig_img, imgfs_file->metadata[index].size[ORIG_RES], &vips_orig_img, NULL))
     {
         free(orig_img);
         return ERR_IO;
@@ -84,19 +100,13 @@ int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
     // Write the resized image at the end of the file
     if (fseek(imgfs_file->file, OFFSET_ZERO, SEEK_END))
     {
-        free(orig_img);
-        free(resized_img);
-        g_object_unref(vips_orig_img);
-        g_object_unref(vips_resized_img);
+        free_images(orig_img, resized_img, vips_orig_img, vips_resized_img);
         return ERR_IO;
     }
 
     if (fwrite(resized_img, len, ONE_ELEMENT, imgfs_file->file) != ONE_ELEMENT)
     {
-        free(orig_img);
-        free(resized_img);
-        g_object_unref(vips_orig_img);
-        g_object_unref(vips_resized_img);
+        free_images(orig_img, resized_img, vips_orig_img, vips_resized_img);
         return ERR_IO;
     }
 
@@ -106,38 +116,23 @@ int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
 
     if (end_of_file == ERR_FTELL)
     {
-        free(orig_img);
-        free(resized_img);
-        g_object_unref(vips_orig_img);
-        g_object_unref(vips_resized_img);  //TODO : function for duplicated code
+        free_images(orig_img, resized_img, vips_orig_img, vips_resized_img);
         return ERR_IO;
     }
 
-    indexed_metadata.offset[resolution] = (uint64_t)(end_of_file - len);
+    imgfs_file->metadata[index].offset[resolution] = (uint64_t)end_of_file - len;
 
     if (fseek(imgfs_file->file, sizeof(imgfs_file->header), SEEK_SET))
     {
-        free(orig_img);
-        free(resized_img);
-        g_object_unref(vips_orig_img);
-        g_object_unref(vips_resized_img);
-        return ERR_IO;
-    }
-    // TODO indexed_metadata 
-    // Put the modified copy of the indexed metadata back to the original metadata
-    imgfs_file->metadata[index] = indexed_metadata;
-    if (fwrite(imgfs_file->metadata, sizeof(struct img_metadata), imgfs_file->header.max_files, imgfs_file->file) != imgfs_file->header.max_files) 
-    {
-        free(orig_img);
-        free(resized_img);
-        g_object_unref(vips_orig_img);
-        g_object_unref(vips_resized_img);
+        free_images(orig_img, resized_img, vips_orig_img, vips_resized_img);
         return ERR_IO;
     }
 
-    free(orig_img);
-    free(resized_img);
-    g_object_unref(vips_orig_img);
-    g_object_unref(vips_resized_img);
-    return ERR_NONE;
+    if (fwrite(imgfs_file->metadata, sizeof(struct img_metadata), imgfs_file->header.max_files, imgfs_file->file) != imgfs_file->header.max_files)
+    {
+        free_images(orig_img, resized_img, vips_orig_img, vips_resized_img);
+        return ERR_IO;
+    }
+
+    return free_images(orig_img, resized_img, vips_orig_img, vips_resized_img);
 }

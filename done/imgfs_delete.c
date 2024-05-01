@@ -17,7 +17,7 @@ int do_delete(const char *img_id, struct imgfs_file *imgfs_file)
 
     int image = NOT_FOUND;
 
-    // Make a copy of header and metadata //TODO : why make a copy and don't we also update the metadata first and then update the file?
+    // Make a copy of header and metadata
     struct imgfs_header header = imgfs_file->header;
     struct img_metadata *metadata = calloc(imgfs_file->header.max_files, sizeof(struct img_metadata));
 
@@ -34,8 +34,8 @@ int do_delete(const char *img_id, struct imgfs_file *imgfs_file)
             if (metadata[i].is_valid == NON_EMPTY)
             {
                 image = FOUND;
-                header.version += 1; // Modify the copy
-                header.nb_files -= 1;
+                header.version++; // Modify the copy
+                header.nb_files--;
                 metadata[i].is_valid = EMPTY;
                 break;
             }
@@ -48,20 +48,23 @@ int do_delete(const char *img_id, struct imgfs_file *imgfs_file)
         return ERR_IMAGE_NOT_FOUND;
     }
 
-    // Reset pointer
-    rewind(imgfs_file->file);
+    // Changes are made first to the metadata (memory, then disk), then to the header if successful
+    free(imgfs_file->metadata);  // Free previous metadata
+    imgfs_file->metadata = metadata;
 
-    if (fwrite(&(header), sizeof(struct imgfs_header), 1, imgfs_file->file) == 1)
+    if (!fseek(imgfs_file->file, sizeof(struct imgfs_header), SEEK_SET))
     {
         if (fwrite(metadata, sizeof(struct img_metadata), imgfs_file->header.max_files, imgfs_file->file) == imgfs_file->header.max_files)
         {
             imgfs_file->header = header; // If the write succeeds (correct open mode), paste the copy in the imgfs_file
-            free(imgfs_file->metadata);
-            imgfs_file->metadata = metadata;
-            return ERR_NONE;
+            if (!fseek(imgfs_file->file, 0, SEEK_SET))
+            {
+                if (fwrite(&(header), sizeof(struct imgfs_header), ONE_ELEMENT, imgfs_file->file) == ONE_ELEMENT)
+                {
+                    return ERR_NONE;
+                }
+            }
         }
     }
-
-    free(metadata);
     return ERR_IO;
 }
