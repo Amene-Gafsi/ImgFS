@@ -16,7 +16,6 @@
 #include <vips/vips.h>
 
 #define NB_COMMANDS 4
-#define COMMAND_CALL_NAME 0
 #define FIRST_ARG 1
 
 /*******************************************************************************
@@ -31,7 +30,7 @@ typedef struct
 
 int main(int argc, char *argv[])
 {
-    VIPS_INIT(argv[COMMAND_CALL_NAME]);
+    VIPS_INIT(argv[0]);
     int ret = 0;
 
     if (argc < 2)
