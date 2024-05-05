@@ -4,8 +4,6 @@
 #include <stdint.h>
 #include <string.h>
 
-#define OFFSET_ZERO 0
-
 /**********************************************************************
  * Deduplicates the image if its content is identical to another existing image
  ********************************************************************** */

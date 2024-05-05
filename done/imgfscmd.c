@@ -15,7 +15,7 @@
 #include <string.h>
 #include <vips/vips.h>
 
-#define NB_COMMANDS 4
+#define NB_COMMANDS 6
 #define FIRST_ARG 1
 
 /*******************************************************************************
@@ -45,10 +45,12 @@ int main(int argc, char *argv[])
          */
         command_mapping list = {"list", do_list_cmd},
                         create = {"create", do_create_cmd},
-                        help_command = {"help", help},
-                        delete = {"delete", do_delete_cmd};
+                        insert = {"insert", do_insert_cmd},
+                        read = {"read", do_read_cmd},
+                        delete = {"delete", do_delete_cmd},
+                        help_command = {"help", help};
 
-        command_mapping commands[NB_COMMANDS] = {list, create, help_command, delete};
+        command_mapping commands[NB_COMMANDS] = {list, create, insert, read, delete, help_command};
         char *current_command = argv[FIRST_ARG];
         int command = NOT_FOUND;
 

@@ -14,6 +14,8 @@
 #include <stdio.h>  // for FILE
 #include <stdint.h> // for uint32_t
 
+#define OFFSET_ZERO 0
+
 #ifdef __cplusplus
 extern "C" {
 #endif
