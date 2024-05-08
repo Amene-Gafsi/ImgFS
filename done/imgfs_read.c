@@ -29,7 +29,7 @@ int do_read(const char *img_id, int resolution, char **image_buffer, uint32_t *i
         {
             indentifier = FOUND;
             // Determine whether the image already exists in the requested resolution
-            if (imgfs_file->metadata[i].offset[resolution] == NULL)
+            if (imgfs_file->metadata[i].offset[resolution] == NULL)   //TODO null or 0
             {
                 ret = lazily_resize(resolution, imgfs_file, i);
                 if (ret != ERR_NONE)
@@ -37,6 +37,9 @@ int do_read(const char *img_id, int resolution, char **image_buffer, uint32_t *i
                     return ret;
                 }
             }
+
+            // Set file pointer to the correct position
+            fseek(imgfs_file->file, imgfs_file->metadata[i].offset[resolution], SEEK_SET);
 
             // Allocate memory for the image in the given resolution
             *image_buffer = calloc(ONE_ELEMENT, imgfs_file->metadata[i].size[resolution]);

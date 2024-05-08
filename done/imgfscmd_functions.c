@@ -72,7 +72,7 @@ static void create_name(const char *img_id, int resolution, char **new_name)
 {
     *new_name = calloc(1, MAX_IMGFS_NAME);
 
-    char *resolution_suffix = NULL;
+    const char *resolution_suffix;
 
     switch (resolution)
     {
@@ -93,7 +93,7 @@ static void create_name(const char *img_id, int resolution, char **new_name)
         break;
     }
 
-    if (strcpy(new_name, strcat(strcat(img_id, resolution_suffix), ".jpg")) == NULL)
+    if (strcpy(*new_name, strcat(strcat(img_id, resolution_suffix), ".jpg")) == NULL)
     {
         free(*new_name);
     }
@@ -111,7 +111,6 @@ static int write_disk_image(const char *filename, const char *image_buffer, uint
 
     if (file == NULL)
     {
-        fclose(file);
         return ERR_IO;
     }
 
@@ -137,6 +136,25 @@ static int read_disk_image(const char *path, char **image_buffer, uint32_t *imag
 
     if (file == NULL)
     {
+        return ERR_IO;
+    }
+
+    // Find file size  
+    if(fseek(file, 0, SEEK_END)){
+        fclose(file);
+        return ERR_IO;
+    }
+    
+    long size = ftell(file);
+    if (size < 0)
+    {
+        fclose(file);
+        return ERR_IO;
+    }
+    *image_size = (uint32_t)ftell(file);
+
+    // Reset position
+    if(fseek(file, 0, SEEK_SET)){
         fclose(file);
         return ERR_IO;
     }
@@ -144,13 +162,14 @@ static int read_disk_image(const char *path, char **image_buffer, uint32_t *imag
     *image_buffer = calloc(ONE_ELEMENT, *image_size);
     if (*image_buffer == NULL)
     {
+        fclose(file);
         return ERR_OUT_OF_MEMORY;
     }
-    
 
-    if (fread(image_buffer, *image_size, ONE_ELEMENT, file) != ONE_ELEMENT)
+    if (fread(*image_buffer, *image_size, ONE_ELEMENT, file) != ONE_ELEMENT)
     {
         fclose(file);
+        free(*image_buffer);
         return ERR_IO;
     }
 
