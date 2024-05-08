@@ -29,7 +29,7 @@ int do_read(const char *img_id, int resolution, char **image_buffer, uint32_t *i
         {
             indentifier = FOUND;
             // Determine whether the image already exists in the requested resolution
-            if (imgfs_file->metadata[i].offset[resolution] == NULL)   //TODO null or 0
+            if (!imgfs_file->metadata[i].offset[resolution])
             {
                 ret = lazily_resize(resolution, imgfs_file, i);
                 if (ret != ERR_NONE)

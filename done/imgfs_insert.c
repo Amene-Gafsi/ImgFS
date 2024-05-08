@@ -70,7 +70,7 @@ int do_insert(const char *image_buffer, size_t image_size, const char *img_id, s
                 fseek(imgfs_file->file, 0, SEEK_END);
 
                 // Update the metadata
-                imgfs_file->metadata[i].offset[ORIG_RES] = ftell(imgfs_file->file);  //TODO offset faux ? -image_size
+                imgfs_file->metadata[i].offset[ORIG_RES] = ftell(imgfs_file->file);
                 imgfs_file->metadata[i].offset[THUMB_RES] = EMPTY;
                 imgfs_file->metadata[i].offset[SMALL_RES] = EMPTY;
 
@@ -78,11 +78,6 @@ int do_insert(const char *image_buffer, size_t image_size, const char *img_id, s
                 imgfs_file->metadata[i].size[THUMB_RES] = EMPTY;
                 imgfs_file->metadata[i].size[SMALL_RES] = EMPTY;
 
-                // Write the image at the end of the file
-                if (fseek(imgfs_file->file, image_size, SEEK_END))
-                {
-                    return ERR_IO;
-                }
                 if (fwrite(image_buffer, image_size, ONE_ELEMENT, imgfs_file->file) != ONE_ELEMENT)
                 {
                     return ERR_IO;
