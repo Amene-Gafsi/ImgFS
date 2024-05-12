@@ -3,7 +3,7 @@
 #include "imgfs_server_service.h" // for DEFAULT_LISTENING_PORT
 #include <stdio.h>
 
-int main(void)
+int main(void) 
 {
     int err = http_init(DEFAULT_LISTENING_PORT, NULL);
     if (err < 0) {

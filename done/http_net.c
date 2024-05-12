@@ -18,6 +18,8 @@
 #include "socket_layer.h"
 #include "error.h"
 
+#define HTTP_PORT 8080 //TODO : Which one to pick?
+
 static int passive_socket = -1;
 static EventCallback cb;
 
@@ -32,9 +34,45 @@ MK_OUR_ERR(ERR_IO);
 /*******************************************************************
  * Handle connection
  */
-static void *handle_connection(void *arg)
+static void *handle_connection(void *arg) //TODO : UNDERSTAND
 {
     if (arg == NULL) return &our_ERR_INVALID_ARGUMENT;
+        
+    int *socket_fd = (int *)arg;
+    char buffer[MAX_HEADER_SIZE + 1]; 
+    int total_read = 0, currently_read = 0;
+
+    while (total_read < MAX_HEADER_SIZE)
+    {
+        currently_read = tcp_read(*socket_fd, buffer + total_read, MAX_HEADER_SIZE - total_read);
+        if (currently_read <= 0) {
+            return &our_ERR_IO;
+        }
+        total_read += currently_read;
+        buffer[total_read] = '\0';
+
+        if (strstr(buffer, HTTP_HDR_END_DELIM)) {
+            break;
+        }
+    }
+
+    if (!strstr(buffer, HTTP_HDR_END_DELIM)) {
+        return &our_ERR_IO;
+    }
+
+    const char *status;
+    if (strstr(buffer, "test: ok")) {
+        status = HTTP_OK;
+    } else {
+        status = HTTP_BAD_REQUEST;
+    }
+
+    int ret = http_reply(*socket_fd, status, "", "", 0);  //TODO : don't know what arguments to give
+    if (ret != ERR_NONE) {
+        return &our_ERR_IO;
+    }
+
+    close(*socket_fd);
 
     return &our_ERR_NONE;
 }
@@ -68,6 +106,22 @@ void http_close(void)
  */
 int http_receive(void)
 {
+    int socket_fd = http_init(HTTP_PORT, cb);
+    if(socket_fd == -1){
+        perror("Error creating socket");
+        return ERR_IO;
+    }
+    while (1)
+    {
+        int new_socket = tcp_accept(socket_fd);
+        if (new_socket == -1)
+        {
+            perror("accept");
+            continue;
+        }
+        handle_connection(&new_socket);
+    }
+    close(socket_fd);
 }
 
 /*******************************************************************
