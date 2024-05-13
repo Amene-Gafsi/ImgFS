@@ -17,9 +17,11 @@ if(fd == -1){
     return ERR_IO;
 }
 struct sockaddr_in server;
+memset(&server, 0, sizeof(server)); // Initialize the structure with zeros
 
 server.sin_family = AF_INET;
 server.sin_port = htons(port);
+server.sin_addr.s_addr = htonl(INADDR_ANY); // Accept connections on any interface
 
 if(bind(fd, &server, sizeof(server))){
     perror("Error binding socket");

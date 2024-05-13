@@ -1,58 +1,112 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <string.h> 
 #include <unistd.h>
-#include <sys/socket.h>
+#include <sys/socket.h> 
 #include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/stat.h>
+#include <sys/stat.h> 
+#include <fcntl.h>
+#include "socket_layer.h"
 
-#define SERVER_IP "127.0.0.1"  // Change as necessary for a different server IP
+#define SERVER_IP "127.0.0.1" 
+#define MAX_SIZE 2048
 
-int main(int argc, char *argv[]) { //TODO
+int main(int argc, char *argv[]) {
+    if (argc != 3) {
+        return 1;
+    }
 
-    // Parse port and file path from arguments
     uint16_t port = atoi(argv[1]);
     const char *filename = argv[2];
 
-    // Get file size
+
+    // Check if the file exists and get its size
     struct stat file_stat;
+    if (stat(filename, &file_stat) != 0) {
+        return 1;
+    }
 
     int file_size = file_stat.st_size;
+
+    if (file_size > MAX_SIZE) {
+    return 1;
+    }
+
     char size_str[20];
-    snprintf(size_str, sizeof(size_str), "%d", file_size);
+    snprintf(size_str, sizeof(size_str), "%d", file_size);   // Convert size to string
 
     // Create socket and connect to server
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock == -1) {
-        perror("socket creation failed");
         return 1;
     }
-
-    struct sockaddr_in serv_addr;
+    
+    struct sockaddr_in serv_addr;  // TODO sockaddr
     memset(&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(port);
 
-    // Connect to the server
-    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-        perror("connection failed");
+    if (connect(sock, &serv_addr, sizeof(serv_addr)) < 0) {
         return 1;
     }
+
+    printf("Talking to %d\n", port);
+    printf("Sending size %d\n", file_size);
 
     // Send the file size to the server
-    if (send(sock, size_str, strlen(size_str), 0) < 0) {
-        perror("send failed");
+    if (tcp_send(sock, size_str, strlen(size_str)) < 0) {
         return 1;
     }
 
-    // Receive the response from the server
-    char buffer[1024] = {0};
-    if (recv(sock, buffer, sizeof(buffer), 0) < 0) {
-        perror("recv failed");
+    char ack[1024] = {0};
+
+    while(1){
+        if (tcp_read(sock, ack, sizeof(ack)) > 0) {
+            printf("Server responsed: %s\n", ack);
+            break;
+        }
+    }
+
+    if (strcmp(ack, "OK") != 0) {
+        printf("Rejected\n");
         return 1;
     }
-    printf("Server response: %s\n", buffer);
+
+     // Send the file to the server
+    int file_fd = open(filename, 00);
+    if (file_fd == -1) {
+        return 1;
+    }
+
+    char file_buffer[file_size+1];
+    file_buffer[file_size] = '\0';
+    
+    int bytes_read = read(file_fd, file_buffer, file_size);
+    close(file_fd);
+    if (bytes_read != file_size) {
+        return 1;
+    }
+
+    printf("Sending %s\n", filename);
+
+    if (tcp_send(sock, file_buffer, file_size) < 0) {
+        printf("Error sending file\n");
+        return 1;
+    }
+
+    // Wait for final acknowledgment
+    memset(ack, 0, sizeof(ack));
+    if (tcp_read(sock, ack, sizeof(ack)) <= 0) {
+        printf("Not Accepted\n");
+        return 1;
+    }
+    printf("Accepted\n");
+
+    if (strcmp(ack, "Received") != 0) {
+        printf("Not Done\n");
+        return 1;
+    }
+    printf("Done\n");
 
     // Close the socket
     close(sock);
