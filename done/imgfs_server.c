@@ -19,6 +19,8 @@
 /********************************************************************/
 static void signal_handler(int sig_num _unused)
 {
+    server_shutdown();
+    exit(0);
 }
 
 /********************************************************************/
@@ -42,6 +44,9 @@ static void set_signal_handler(void)
 
 int main (int argc, char *argv[])
 {
+    server_startup(argc, argv);
+    int ret = ERR_NONE;
+    while((ret = http_receive()) == ERR_NONE);
 
-    return 0;
+    return ret;
 }

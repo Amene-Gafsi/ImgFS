@@ -17,8 +17,7 @@
 #include "http_net.h"
 #include "socket_layer.h"
 #include "error.h"
-
-#define HTTP_PORT 8080 //TODO : Which one to pick?
+#include "imgfs.h"
 
 static int passive_socket = -1;
 static EventCallback cb;
@@ -34,7 +33,7 @@ MK_OUR_ERR(ERR_IO);
 /*******************************************************************
  * Handle connection
  */
-static void *handle_connection(void *arg) //TODO : UNDERSTAND
+static void *handle_connection(void *arg)
 {
     if (arg == NULL) return &our_ERR_INVALID_ARGUMENT;
         
@@ -67,7 +66,7 @@ static void *handle_connection(void *arg) //TODO : UNDERSTAND
         status = HTTP_BAD_REQUEST;
     }
 
-    int ret = http_reply(*socket_fd, status, "", "", 0);  //TODO : don't know what arguments to give
+    int ret = http_reply(*socket_fd, status, "", "", 0); 
     if (ret != ERR_NONE) {
         return &our_ERR_IO;
     }
@@ -106,22 +105,20 @@ void http_close(void)
  */
 int http_receive(void)
 {
-    int socket_fd = http_init(HTTP_PORT, cb);
-    if(socket_fd == -1){
+    if(passive_socket == -1){
         perror("Error creating socket");
         return ERR_IO;
-    }
-    while (1)
+    } 
+    int new_socket = tcp_accept(passive_socket);
+    if (new_socket == -1)
     {
-        int new_socket = tcp_accept(socket_fd);
-        if (new_socket == -1)
-        {
-            perror("accept");
-            continue;
-        }
-        handle_connection(&new_socket);
+        close(passive_socket);
+        perror("accept");
+        return ERR_IO;
     }
-    close(socket_fd);
+    handle_connection(&new_socket);
+    close(new_socket);
+    return ERR_NONE;
 }
 
 /*******************************************************************
@@ -138,5 +135,18 @@ int http_serve_file(int connection, const char* filename)
  */
 int http_reply(int connection, const char* status, const char* headers, const char *body, size_t body_len)
 {
+    size_t buffer_size = strlen(HTTP_PROTOCOL_ID) + strlen(status) + strlen(HTTP_LINE_DELIM) + strlen(headers) +
+                        strlen("Content-Length:") + snprintf(NULL, 0, "%zu", body_len) + strlen(HTTP_HDR_END_DELIM);
+                        
+    char *buffer = calloc(1, buffer_size + 1); // +1 for the null terminator
+
+    snprintf(buffer, sizeof(buffer), "%s %s %s %s Content-Length: %zu %s",
+             HTTP_PROTOCOL_ID, status, HTTP_LINE_DELIM, headers, body_len, HTTP_HDR_END_DELIM);
+
+    
+    if(tcp_send(passive_socket, buffer, strlen(buffer)) == -1){
+        return ERR_IO;
+    }
+
     return ERR_NONE;
 }

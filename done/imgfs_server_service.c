@@ -30,6 +30,29 @@ int server_startup (int argc, char **argv)
 {
     if (argc < 2) return ERR_NOT_ENOUGH_ARGUMENTS;
 
+    char *filename = argv[1];
+
+    if(argc > 2) server_port = argv[2];
+    if(server_port <= 0){
+        server_port = DEFAULT_LISTENING_PORT;
+    }
+
+    int ret = ERR_NONE;
+    ret = do_open(filename, "rb", &fs_file);
+
+    if(ret != ERR_NONE){
+        return ret;
+    }
+
+    print_header(&fs_file);
+    EventCallback cb;
+
+    if(http_init(server_port, cb) == -1){
+        return ERR_IO;
+    }
+    prinf("ImgFS server started on http://localhost: %d", server_port);
+
+    return ERR_NONE;
 }
 
 /********************************************************************//**
