@@ -50,7 +50,7 @@ int server_startup (int argc, char **argv)
     if(http_init(server_port, cb) == -1){
         return ERR_IO;
     }
-    prinf("ImgFS server started on http://localhost: %d", server_port);
+    printf("ImgFS server started on http://localhost: %d", server_port);
 
     return ERR_NONE;
 }

@@ -35,16 +35,17 @@ MK_OUR_ERR(ERR_IO);
  */
 static void *handle_connection(void *arg)
 {
-    if (arg == NULL) return &our_ERR_INVALID_ARGUMENT;
-        
+    if (arg == NULL) return &our_ERR_INVALID_ARGUMENT;   
     int *socket_fd = (int *)arg;
     char buffer[MAX_HEADER_SIZE + 1]; 
+    
     int total_read = 0, currently_read = 0;
 
     while (total_read < MAX_HEADER_SIZE)
     {
         currently_read = tcp_read(*socket_fd, buffer + total_read, MAX_HEADER_SIZE - total_read);
         if (currently_read <= 0) {
+            close(*socket_fd);
             return &our_ERR_IO;
         }
         total_read += currently_read;
@@ -56,6 +57,7 @@ static void *handle_connection(void *arg)
     }
 
     if (!strstr(buffer, HTTP_HDR_END_DELIM)) {
+        close(*socket_fd);
         return &our_ERR_IO;
     }
 
@@ -66,8 +68,10 @@ static void *handle_connection(void *arg)
         status = HTTP_BAD_REQUEST;
     }
 
-    int ret = http_reply(*socket_fd, status, "", "", 0); 
+    //int ret = http_reply(1234, HTTP_OK, "Content-Type: text/html; charset=utf-8" HTTP_LINE_DELIM, buffer, 6789);
+    int ret = http_reply(*socket_fd, status, buffer, "", 0); //TODO how to get the body ?
     if (ret != ERR_NONE) {
+        close(*socket_fd);
         return &our_ERR_IO;
     }
 
@@ -135,18 +139,31 @@ int http_serve_file(int connection, const char* filename)
  */
 int http_reply(int connection, const char* status, const char* headers, const char *body, size_t body_len)
 {
-    size_t buffer_size = strlen(HTTP_PROTOCOL_ID) + strlen(status) + strlen(HTTP_LINE_DELIM) + strlen(headers) +
-                        strlen("Content-Length:") + snprintf(NULL, 0, "%zu", body_len) + strlen(HTTP_HDR_END_DELIM);
-                        
-    char *buffer = calloc(1, buffer_size + 1); // +1 for the null terminator
+    //Error binding socket: Address already in use  //TODO when I rereun fast
+    //http_init() failed
+    //I/O Error
+    //TODO warning curl
+    size_t header_size = strlen(HTTP_PROTOCOL_ID) + strlen(status) + strlen(HTTP_LINE_DELIM) + strlen(headers) + strlen("Content-Length: ") + snprintf(NULL, 0, "%zu", body_len) + strlen(HTTP_HDR_END_DELIM);
+    size_t buffer_size = header_size + body_len;
 
-    snprintf(buffer, sizeof(buffer), "%s %s %s %s Content-Length: %zu %s",
-             HTTP_PROTOCOL_ID, status, HTTP_LINE_DELIM, headers, body_len, HTTP_HDR_END_DELIM);
+    char *buffer = calloc(1, buffer_size +1);
+    if (buffer == NULL) {
+        return ERR_OUT_OF_MEMORY;
+    }
 
-    
-    if(tcp_send(passive_socket, buffer, strlen(buffer)) == -1){
+    if(snprintf(buffer, header_size, "%s%s%s%sContent-Length: %zu%s", HTTP_PROTOCOL_ID, status, HTTP_LINE_DELIM, headers, body_len, HTTP_HDR_END_DELIM) <= 0){
+        free(buffer);
         return ERR_IO;
     }
 
+    if (body && body_len > 0) {
+        memcpy(buffer + header_size, body, body_len);
+    }
+
+    if(tcp_send(connection, buffer, strlen(buffer)) == -1){
+        free(buffer);
+        return ERR_IO;
+    }
+    free(buffer);
     return ERR_NONE;
 }
