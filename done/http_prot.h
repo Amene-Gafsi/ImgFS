@@ -72,3 +72,4 @@ int http_get_var(const struct http_string* url, const char* name, char* out, siz
  * @brief Compare method with verb and return 1 if they are equal, 0 otherwise
  */
 int http_match_verb(const struct http_string* method, const char* verb);
+

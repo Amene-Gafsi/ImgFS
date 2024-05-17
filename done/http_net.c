@@ -142,8 +142,10 @@ int http_reply(int connection, const char* status, const char* headers, const ch
     //Error binding socket: Address already in use  //TODO when I rereun fast
     //http_init() failed
     //I/O Error
-    //TODO warning curl
-    size_t header_size = strlen(HTTP_PROTOCOL_ID) + strlen(status) + strlen(HTTP_LINE_DELIM) + strlen(headers) + strlen("Content-Length: ") + snprintf(NULL, 0, "%zu", body_len) + strlen(HTTP_HDR_END_DELIM);
+    const char* new_header = calloc(strlen(headers) - 1, sizeof(char));
+    strncpy(new_header, headers, strlen(headers) - 2);
+
+    size_t header_size = strlen(HTTP_PROTOCOL_ID) + strlen(status) + strlen(HTTP_LINE_DELIM) + strlen(new_header) + strlen("Content-Length: ") + snprintf(NULL, 0, "%zu", body_len) + strlen(HTTP_HDR_END_DELIM);
     size_t buffer_size = header_size + body_len;
 
     char *buffer = calloc(1, buffer_size +1);
@@ -151,7 +153,7 @@ int http_reply(int connection, const char* status, const char* headers, const ch
         return ERR_OUT_OF_MEMORY;
     }
 
-    if(snprintf(buffer, header_size, "%s%s%s%sContent-Length: %zu%s", HTTP_PROTOCOL_ID, status, HTTP_LINE_DELIM, headers, body_len, HTTP_HDR_END_DELIM) <= 0){
+    if(snprintf(buffer, header_size +1, "%s%s%s%sContent-Length: %zu%s", HTTP_PROTOCOL_ID, status, HTTP_LINE_DELIM, new_header, body_len, HTTP_HDR_END_DELIM) <= 0){
         free(buffer);
         return ERR_IO;
     }
@@ -160,7 +162,7 @@ int http_reply(int connection, const char* status, const char* headers, const ch
         memcpy(buffer + header_size, body, body_len);
     }
 
-    if(tcp_send(connection, buffer, strlen(buffer)) == -1){
+    if(tcp_send(connection, buffer, strlen(buffer)) == -1){  //TODO send -1 without null
         free(buffer);
         return ERR_IO;
     }
