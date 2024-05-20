@@ -20,7 +20,7 @@
 #include "imgfs.h"
 
 static int passive_socket = -1;
-static EventCallback cb;
+static EventCallback cb; //TODO : should I change this?
 
 #define MK_OUR_ERR(X) \
 static int our_ ## X = X
@@ -169,7 +169,7 @@ static void *handle_connection(void *arg) {
                 }
             }
 
-            const char status;
+            char status;
             if (found == FOUND) {
                 status = HTTP_OK;
             } else {
