@@ -85,6 +85,7 @@ static const char *get_next_token(const char *message, const char *delimiter, st
     return end + strlen(delimiter);
 }
 
+// TODO : should we add this line ?   _Static_assert(strcmp(HTTP_HDR_END_DELIM, HTTP_LINE_DELIM HTTP_LINE_DELIM) == 0, "HTTP_HDR_END_DELIM is not twice HTTP_LINE_DELIM");
 static const char *http_parse_headers(const char *header_start, struct http_message *output)
 {
     const char *remaining = header_start;
@@ -111,12 +112,12 @@ int http_parse_message(const char *stream, size_t bytes_received, struct http_me
 {
     // check that headers have been completly received
     if (!strstr(stream, HTTP_HDR_END_DELIM))
-        return 0;
+        return -1; // TODO : return negative value if error
 
     // Parse the first line
     const char *after_key = stream;
     struct http_string pair;
-    int content_length = 0;
+    // int content_length = 0; //TODO : we used content_length instead of content_len
 
     after_key = get_next_token(after_key, " ", &pair);
     out->method = pair;
@@ -136,17 +137,33 @@ int http_parse_message(const char *stream, size_t bytes_received, struct http_me
     {
         if (!strncmp(out->headers[i].key.val, "Content-Length", out->headers[i].key.len))
         {
-            content_length = atoi(out->headers[i].value.val);
+            *content_len = atoi(out->headers[i].value.val);
             break;
         }
     }
-    if (content_len <= 0)
+    /*if (*content_len <= 0) //TODO : we should first check that the header was fully received?
         return 1;
     if (after_key == NULL)
         return 0;
 
-    out->body.val = after_key;
-    out->body.len = content_length;
+    out->body.val = after_key; //TODO: should we check that we have exactly content_length elements?
+    out->body.len = *content_len;
 
-    return 1;
+    return 1;*/
+    //TODO : make a helper function ?
+    // Check if message received completly
+    if (after_key == NULL)
+        return 0;
+    // Received a complete header message with no body
+    if (*content_len <= 0 && !strncmp(after_key, HTTP_LINE_DELIM, strlen(HTTP_LINE_DELIM)))
+        return 1;
+    // Received a complete header message with body
+    if (*content_len > 0)
+    {
+        out->body.val = after_key;
+        out->body.len = *content_len;
+        return 1;
+    }
+
+    return -1;
 }

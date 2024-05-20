@@ -33,7 +33,7 @@ MK_OUR_ERR(ERR_IO);
 /*******************************************************************
  * Handle connection
  */
-static void *handle_connection(void *arg)
+/*static void *handle_connection(void *arg)
 {
     if (arg == NULL) return &our_ERR_INVALID_ARGUMENT;   
     int *socket_fd = (int *)arg;
@@ -77,6 +77,117 @@ static void *handle_connection(void *arg)
 
     close(*socket_fd);
 
+    return &our_ERR_NONE;
+}*/
+
+static void *handle_connection(void *arg) {
+    if (arg == NULL) return &our_ERR_INVALID_ARGUMENT;
+    int *socket_fd = (int *)arg;
+    char *buffer = malloc(MAX_HEADER_SIZE + 1);
+    if (!buffer) {
+        close(*socket_fd);
+        return &our_ERR_IO;
+    }
+
+    int total_read = 0, currently_read = 0;
+    int extended = 0;
+    int content_len = 0;
+
+    struct http_message message;
+    memset(&message, 0, sizeof(struct http_message));
+
+    while (1) {
+        // Read data from socket
+        currently_read = tcp_read(*socket_fd, buffer + total_read, MAX_HEADER_SIZE - total_read);
+        if (currently_read < 0) {
+            free(buffer);
+            close(*socket_fd);
+            return &our_ERR_IO;
+        } 
+
+        if (currently_read == 0) {
+            // Client closed the connection
+            break;
+        }
+
+        total_read += currently_read;
+        buffer[total_read] = '\0';
+
+        // Parse the message
+        int parse_result = http_parse_message(buffer, total_read, &message, &content_len);
+        
+        // Check for error
+        if (parse_result < 0) {
+            free(buffer);
+            close(*socket_fd);
+            return &parse_result;
+        }
+       
+       // Check if messsage has not been received completely
+        if (parse_result == 0) {
+            if (!extended && content_len > 0 && total_read < MAX_HEADER_SIZE + content_len) {
+                char *extended_buffer = realloc(buffer, MAX_HEADER_SIZE + content_len + 1);
+                if (!extended_buffer) {
+                    free(buffer);
+                    close(*socket_fd);
+                    return &our_ERR_IO;
+                }
+                buffer = extended_buffer;
+                extended = 1;
+                continue;
+            } else {
+                free(buffer);
+                close(*socket_fd);
+                return &our_ERR_IO;
+            }
+        }
+
+        // Check if messsage has been received completely
+        if (parse_result > 0) {
+            int callback_result = cb(&message, *socket_fd);
+            if (callback_result != ERR_NONE) {
+                free(buffer);
+                close(*socket_fd);
+                return &callback_result;
+            }
+
+            // Send HTTP reply
+            /*const char status;
+            if (strstr(buffer, "test: ok")) {
+                status = HTTP_OK;
+            } else {
+                status = HTTP_BAD_REQUEST;
+            }*/
+
+            // Check for "test: ok" header to determine the status //TODO: Should do this?
+            const char status;
+            int found = NOT_FOUND;
+            for (size_t i = 0; i < message.num_headers; ++i) {
+                if (strncmp(message.headers[i].key.val, "test", message.headers[i].key.len) == 0 &&
+                    strncmp(message.headers[i].value.val, "ok", message.headers[i].value.len) == 0) {
+                    found = FOUND;
+                    status = HTTP_OK;
+                    break;
+                }
+            }
+            if (found == NOT_FOUND) status = HTTP_BAD_REQUEST;
+
+            int ret = http_reply(*socket_fd, &status, buffer, "", 0); 
+            if (ret != ERR_NONE) {
+                free(buffer);
+                close(*socket_fd);
+                return &our_ERR_IO;
+            }
+            
+            // Reset variables for a new round of tcp_read
+            total_read = 0;
+            extended = 0;
+            memset(&message, 0, sizeof(struct http_message));
+        }
+    }
+
+    free(buffer);
+    close(*socket_fd);
     return &our_ERR_NONE;
 }
 
