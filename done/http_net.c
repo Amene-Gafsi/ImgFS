@@ -160,17 +160,21 @@ static void *handle_connection(void *arg) {
             }*/
 
             // Check for "test: ok" header to determine the status //TODO: Should do this?
-            const char status;
             int found = NOT_FOUND;
             for (size_t i = 0; i < message.num_headers; ++i) {
                 if (strncmp(message.headers[i].key.val, "test", message.headers[i].key.len) == 0 &&
                     strncmp(message.headers[i].value.val, "ok", message.headers[i].value.len) == 0) {
                     found = FOUND;
-                    status = HTTP_OK;
                     break;
                 }
             }
-            if (found == NOT_FOUND) status = HTTP_BAD_REQUEST;
+
+            const char status;
+            if (found == FOUND) {
+                status = HTTP_OK;
+            } else {
+                status = HTTP_BAD_REQUEST;
+            }
 
             int ret = http_reply(*socket_fd, &status, buffer, "", 0); 
             if (ret != ERR_NONE) {
