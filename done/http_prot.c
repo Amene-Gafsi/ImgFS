@@ -8,6 +8,9 @@
  ************************************************************************* */
 int http_match_uri(const struct http_message *message, const char *target_uri)
 {
+    M_REQUIRE_NON_NULL(message);
+    M_REQUIRE_NON_NULL(target_uri);
+    M_REQUIRE_NON_NULL(message->uri.val);
     return !strncmp(message->uri.val, target_uri, strlen(target_uri));
 }
 
@@ -16,7 +19,16 @@ int http_match_uri(const struct http_message *message, const char *target_uri)
  ************************************************************************ */
 int http_match_verb(const struct http_string *method, const char *verb)
 {
-    return !strcmp(method->val, verb);
+    M_REQUIRE_NON_NULL(method);
+    M_REQUIRE_NON_NULL(verb);
+    M_REQUIRE_NON_NULL(method->val);
+
+    size_t verb_length = strlen(verb);
+    if (method->len != verb_length) {
+        return 0;
+    }
+
+    return !strncmp(method->val, verb, verb_length);
 }
 
 /************************************************************************
@@ -25,60 +37,63 @@ int http_match_verb(const struct http_string *method, const char *verb)
 int http_get_var(const struct http_string *url, const char *name, char *out, size_t out_len)
 {
     M_REQUIRE_NON_NULL(url);
+    M_REQUIRE_NON_NULL(url->val);
     M_REQUIRE_NON_NULL(name);
+    M_REQUIRE_NON_NULL(out);
 
-    const char parameter[strlen(name) + 2]; // TODO : = and \0
-    strcpy(parameter, name);
-    strcat(parameter, '=');
+    char parameter[strlen(name) + 2];
+    snprintf(parameter, sizeof(parameter), "%s=", name);
 
-    const char *url_args = strchr(url, '?') + 1;
-    if (!url_args)
+    // look for ? in the url
+    const char *url_args = strchr(url->val, '?');
+    if (!url_args) {
         return 0;
+    }
+    url_args += 1;
 
+    // look for the parameter in the url
     const char *param_start = strstr(url_args, parameter);
-    if (!param_start)
+    if (!param_start) {
         return 0;
+    }
+    param_start += strlen(parameter);
 
-    param_start += strlen(name) + 1;
-
-    // Find the end of the parameter value
+    // look for the end of the parameter
     const char *param_end = strchr(param_start, '&');
-    if (!param_end)
-        param_end = url + strlen(url);
-    if (!param_end)
-    {
-        out = param_start;
-        out_len = strlen(param_start);
-        return out_len;
+    if (!param_end) {
+        param_end = url->val + url->len;
     }
 
-    out_len = param_end - param_start;
-    strncpy(out, param_start, out_len);
+    size_t value_len = param_end - param_start;
+    if (value_len >= out_len) {
+        return ERR_RUNTIME;
+    }
 
-    return out_len;
+    strncpy(out, param_start, value_len);
+    out[value_len] = '\0';
+
+    return value_len;
 }
 
+/************************************************************************************************************
+ * Writes the message, until the delimiter, in the output struct and returns the next char after the delimiter
+ ************************************************************************************************************ */
 static const char *get_next_token(const char *message, const char *delimiter, struct http_string *output)
 {
-    if (message == NULL || delimiter == NULL)
-    {
-        return NULL;
-    }
+    M_REQUIRE_NON_NULL(message);
+    M_REQUIRE_NON_NULL(delimiter);
 
     const char *end = strstr(message, delimiter);
-    if (end == NULL)
-    {
-        if (output != NULL)
-        {
+    if (!end) {
+        if (output) {
             output->val = message;
             output->len = strlen(message);
         }
-        return NULL;
+        return message + strlen(message);
     }
 
-    if (output != NULL)
-    {
-        strncpy(output->val, message, end - message);
+    if (output) {
+        output->val = message;   //TODO need to cut the delimiter or len suffit
         output->len = end - message;
     }
 
@@ -86,8 +101,14 @@ static const char *get_next_token(const char *message, const char *delimiter, st
 }
 
 // TODO : should we add this line ?   _Static_assert(strcmp(HTTP_HDR_END_DELIM, HTTP_LINE_DELIM HTTP_LINE_DELIM) == 0, "HTTP_HDR_END_DELIM is not twice HTTP_LINE_DELIM");
+/************************************************************************************************************
+ * Parses the headers of the message and returns the next char after the last header
+ ************************************************************************************************************ */
 static const char *http_parse_headers(const char *header_start, struct http_message *output)
 {
+    M_REQUIRE_NON_NULL(header_start);
+    M_REQUIRE_NON_NULL(output);
+
     const char *remaining = header_start;
     struct http_string pair;
 
@@ -98,8 +119,6 @@ static const char *http_parse_headers(const char *header_start, struct http_mess
     output->headers[output->num_headers].key = pair;
     pair.val = NULL;
     remaining = get_next_token(remaining, HTTP_LINE_DELIM, &pair);
-    if (remaining == NULL)
-        return NULL;
     output->headers[output->num_headers].value = pair;
 
     return remaining;
@@ -110,14 +129,18 @@ static const char *http_parse_headers(const char *header_start, struct http_mess
  ************************************************************************ */
 int http_parse_message(const char *stream, size_t bytes_received, struct http_message *out, int *content_len)
 {
+    M_REQUIRE_NON_NULL(stream);
+    M_REQUIRE_NON_NULL(out);
+    M_REQUIRE_NON_NULL(content_len);
+
     // check that headers have been completly received
     if (!strstr(stream, HTTP_HDR_END_DELIM))
-        return -1; // TODO : return negative value if error
-
+        return 0;
+    out->num_headers = 0;   //TODO check if it is necessary
     // Parse the first line
     const char *after_key = stream;
     struct http_string pair;
-    // int content_length = 0; //TODO : we used content_length instead of content_len
+    *content_len = 0;
 
     after_key = get_next_token(after_key, " ", &pair);
     out->method = pair;
@@ -128,42 +151,29 @@ int http_parse_message(const char *stream, size_t bytes_received, struct http_me
     after_key = get_next_token(after_key, HTTP_LINE_DELIM, NULL);
 
     while (after_key != NULL && strncmp(after_key, HTTP_LINE_DELIM, strlen(HTTP_LINE_DELIM)))
-    {
+    {      
         after_key = http_parse_headers(after_key, out);
+        out->num_headers++;
     }
+
+    after_key = get_next_token(after_key, HTTP_LINE_DELIM, NULL);  // skip the empty line
 
     // get the content length from the headers
     for (size_t i = 0; i < out->num_headers; i++)
     {
         if (!strncmp(out->headers[i].key.val, "Content-Length", out->headers[i].key.len))
         {
-            *content_len = atoi(out->headers[i].value.val);
+            *content_len= atoi(out->headers[i].value.val);
             break;
         }
     }
-    /*if (*content_len <= 0) //TODO : we should first check that the header was fully received?
+
+    if (*content_len <= 0)
         return 1;
-    if (after_key == NULL)
+    if (after_key == NULL || strlen(after_key) < *content_len)
         return 0;
 
-    out->body.val = after_key; //TODO: should we check that we have exactly content_length elements?
+    out->body.val = after_key;
     out->body.len = *content_len;
-
-    return 1;*/
-    //TODO : make a helper function ?
-    // Check if message received completly
-    if (after_key == NULL)
-        return 0;
-    // Received a complete header message with no body
-    if (*content_len <= 0 && !strncmp(after_key, HTTP_LINE_DELIM, strlen(HTTP_LINE_DELIM)))
-        return 1;
-    // Received a complete header message with body
-    if (*content_len > 0)
-    {
-        out->body.val = after_key;
-        out->body.len = *content_len;
-        return 1;
-    }
-
-    return -1;
+    return 1;
 }
