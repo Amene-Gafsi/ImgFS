@@ -133,7 +133,7 @@ int http_parse_message(const char *stream, size_t bytes_received, struct http_me
     M_REQUIRE_NON_NULL(out);
     M_REQUIRE_NON_NULL(content_len);
 
-    // check that headers have been completly received
+    // check that headers have been completly received //TODO negative return ?
     if (!strstr(stream, HTTP_HDR_END_DELIM))
         return 0;
     out->num_headers = 0;   //TODO check if it is necessary
@@ -156,7 +156,7 @@ int http_parse_message(const char *stream, size_t bytes_received, struct http_me
         out->num_headers++;
     }
 
-    after_key = get_next_token(after_key, HTTP_LINE_DELIM, NULL);  // skip the empty line
+    after_key = get_next_token(after_key, HTTP_LINE_DELIM, NULL);  // skip the empty line  //TODO what if after_key null
 
     // get the content length from the headers
     for (size_t i = 0; i < out->num_headers; i++)
@@ -168,9 +168,9 @@ int http_parse_message(const char *stream, size_t bytes_received, struct http_me
         }
     }
 
-    if (*content_len <= 0)
+    if (*content_len <= 0)   //TODO check afterkey null ?
         return 1;
-    if (after_key == NULL || strlen(after_key) < *content_len)
+    if (after_key == NULL || strlen(after_key) != *content_len) //TODO less or equal
         return 0;
 
     out->body.val = after_key;

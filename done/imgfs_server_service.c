@@ -45,7 +45,7 @@ int server_startup (int argc, char **argv)
     }
 
     print_header(&fs_file);
-    EventCallback cb;
+    EventCallback cb = handle_http_message;  // TODO added
 
     if(http_init(server_port, cb) == -1){
         return ERR_IO;

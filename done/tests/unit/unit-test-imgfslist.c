@@ -53,7 +53,7 @@ START_TEST(do_list_cmd_inexistent_file)
 END_TEST
 
 // ======================================================================
-START_TEST(do_list_json_emtpy) //TODO put test again
+START_TEST(do_list_json_emtpy)
 {
     start_test_print;
 
@@ -73,7 +73,7 @@ START_TEST(do_list_json_emtpy) //TODO put test again
 END_TEST
 
 // ======================================================================
-START_TEST(do_list_json_non_emtpy) 
+START_TEST(do_list_json_non_emtpy)
 {
     start_test_print;
 
@@ -103,8 +103,8 @@ Suite *imgfs_structures_test_suite()
     Add_Test(s, do_list_cmd_too_many_params);
     Add_Test(s, do_list_cmd_inexistent_file);
 
-    //Add_Test(s, do_list_json_emtpy); //TODO add back
-    //Add_Test(s, do_list_json_non_emtpy);
+    Add_Test(s, do_list_json_emtpy);
+    Add_Test(s, do_list_json_non_emtpy);
     return s;
 }
 

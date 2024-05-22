@@ -169,14 +169,14 @@ static void *handle_connection(void *arg) {
                 }
             }
 
-            char status;
+            const char *status;
             if (found == FOUND) {
                 status = HTTP_OK;
             } else {
                 status = HTTP_BAD_REQUEST;
             }
 
-            int ret = http_reply(*socket_fd, &status, buffer, "", 0); 
+            int ret = http_reply(*socket_fd, status, buffer, "", 0); 
             if (ret != ERR_NONE) {
                 free(buffer);
                 close(*socket_fd);
@@ -245,7 +245,50 @@ int http_receive(void)
  */
 int http_serve_file(int connection, const char* filename)
 {
-    int ret = ERR_NONE;
+    M_REQUIRE_NON_NULL(filename);
+
+    // open file
+    FILE* file = fopen(filename, "r");
+    if (file == NULL) {
+        fprintf(stderr, "http_serve_file(): Failed to open file \"%s\"\n", filename);
+        return http_reply(connection, "404 Not Found", "", "", 0);
+    }
+
+    // get its size
+    fseek(file, 0, SEEK_END);
+    const long pos = ftell(file);
+    if (pos < 0) {
+        fprintf(stderr, "http_serve_file(): Failed to tell file size of \"%s\"\n",
+                filename);
+        fclose(file);
+        return ERR_IO;
+    }
+    rewind(file);
+    const size_t file_size = (size_t) pos;
+
+    // read file content
+    char* const buffer = calloc(file_size + 1, 1);
+    if (buffer == NULL) {
+        fprintf(stderr, "http_serve_file(): Failed to allocate memory to serve \"%s\"\n", filename);
+        fclose(file);
+        return ERR_IO;
+    }
+
+    const size_t bytes_read = fread(buffer, 1, file_size, file);
+    if (bytes_read != file_size) {
+        fprintf(stderr, "http_serve_file(): Failed to read \"%s\"\n", filename);
+        fclose(file);
+        return ERR_IO;
+    }
+
+    // send the file
+    const int  ret = http_reply(connection, HTTP_OK,
+                                "Content-Type: text/html; charset=utf-8" HTTP_LINE_DELIM,
+                                buffer, file_size);
+
+    // garbage collecting
+    fclose(file);
+    free(buffer);
     return ret;
 }
 
@@ -257,8 +300,20 @@ int http_reply(int connection, const char* status, const char* headers, const ch
     //Error binding socket: Address already in use  //TODO when I rereun fast
     //http_init() failed
     //I/O Error
-    const char* new_header = calloc(strlen(headers) - 1, sizeof(char));
-    strncpy(new_header, headers, strlen(headers) - 2);
+
+    M_REQUIRE_NON_NULL(status);
+    M_REQUIRE_NON_NULL(headers);
+
+    const char* new_header;
+    if(strlen(headers) > 1){
+        new_header =calloc(strlen(headers) - 1, sizeof(char));
+        if (new_header == NULL) {
+            return ERR_OUT_OF_MEMORY;
+        }
+        strncpy(new_header, headers, strlen(headers) - 2);
+    } else {
+        new_header = "";
+    }
 
     size_t header_size = strlen(HTTP_PROTOCOL_ID) + strlen(status) + strlen(HTTP_LINE_DELIM) + strlen(new_header) + strlen("Content-Length: ") + snprintf(NULL, 0, "%zu", body_len) + strlen(HTTP_HDR_END_DELIM);
     size_t buffer_size = header_size + body_len;

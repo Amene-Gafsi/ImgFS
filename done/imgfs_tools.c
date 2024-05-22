@@ -119,8 +119,10 @@ void do_close(struct imgfs_file *imgfs_file)
         if (imgfs_file->file != NULL)
         {
             fclose(imgfs_file->file);
+            imgfs_file->file = NULL;
         }
         free(imgfs_file->metadata);
+        imgfs_file->metadata = NULL;
     }
 }
 
