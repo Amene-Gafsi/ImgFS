@@ -297,10 +297,6 @@ int http_serve_file(int connection, const char* filename)
  */
 int http_reply(int connection, const char* status, const char* headers, const char *body, size_t body_len)
 {
-    //Error binding socket: Address already in use  //TODO when I rereun fast
-    //http_init() failed
-    //I/O Error
-
     M_REQUIRE_NON_NULL(status);
     M_REQUIRE_NON_NULL(headers);
 
