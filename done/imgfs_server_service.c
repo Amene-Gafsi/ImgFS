@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h> // uint16_t
+#include <vips/vips.h>
 
 #include "error.h"
 #include "util.h" // atouint16
@@ -31,32 +32,34 @@ int server_startup(int argc, char **argv)
     if (argc < 2)
         return ERR_NOT_ENOUGH_ARGUMENTS;
 
+    if (VIPS_INIT(argv[0])) {
+        return ERR_IO;  
+    }
+
     char *filename = argv[1];
 
     if (argc > 2)
-        server_port = argv[2];
+        server_port = atoi(argv[2]);  // TODO : error handling
     if (server_port <= 0)
     {
         server_port = DEFAULT_LISTENING_PORT;
     }
 
     int ret = ERR_NONE;
-    ret = do_open(filename, "rb", &fs_file);
-
+    ret = do_open(filename, "rb+", &fs_file);
     if (ret != ERR_NONE)
     {
+        vips_shutdown();
         return ret;
     }
-
-    print_header(&fs_file);
+    print_header(&fs_file.header);
     EventCallback cb = handle_http_message; // TODO added
 
     if (http_init(server_port, cb) == -1)
     {
+        vips_shutdown();
         return ERR_IO;
     }
-    printf("ImgFS server started on http://localhost: %d", server_port);
-
     return ERR_NONE;
 }
 
@@ -65,9 +68,9 @@ int server_startup(int argc, char **argv)
                                                                         ********************************************************************** */
 void server_shutdown(void)
 {
-    fprintf(stderr, "Shutting down...\n");
     http_close();
     do_close(&fs_file);
+    vips_shutdown();
 }
 
 /**********************************************************************
@@ -108,55 +111,77 @@ int handle_list_call(struct http_message *msg, int connection) // TODO : error h
     ret = do_list(&fs_file, JSON, &json);
     if (ret != ERR_NONE)
     {
-        return reply_error_msg(connection, ret)
+        return reply_error_msg(connection, ret);
     }
-    int body_len = strlen(json);
-    const char *headers = "Content-Type: application/json\r\n";
-    return http_reply(connection, HTTP_OK, headers, json, body_len);
+    int body_size = strlen(json);
+    return http_reply(connection, HTTP_OK, "Content-Type: application/json" HTTP_LINE_DELIM, json, body_size);
 }
 
 int handle_read_call(struct http_message *msg, int connection) // TODO : error handling
 {
-    char *out_res = NULL;
-    char *out_img_id = NULL;
-    http_get_var(msg->uri, "res", out_res, MAX_REQUEST_SIZE);
-    int res = resolution_atoi(out_res);
-    http_get_var(msg->uri, "img_id", out_img_id, MAX_IMG_ID);
+    char out_res[MAX_HEADER_SIZE] = {0};
+    char out_img_id[MAX_IMG_ID] = {0};
 
-    uint32_t image_size = 0;
-    char *image_buffer = calloc(1, size);
-    if (image_buffer == NULL)
-    {
-        return reply_error_msg(connection, ERR_OUT_OF_MEMORY);
+    if(http_get_var(&msg->uri, "res", out_res, MAX_HEADER_SIZE) == 0) {
+        return reply_error_msg(connection, ERR_NOT_ENOUGH_ARGUMENTS);
     }
-
+        if(http_get_var(&msg->uri, "img_id", out_img_id, MAX_IMG_ID) == 0) {
+        return reply_error_msg(connection, ERR_NOT_ENOUGH_ARGUMENTS);
+    }
+    int res = resolution_atoi(out_res);
+    if (res == -1)
+    {
+        return reply_error_msg(connection, ERR_RESOLUTIONS);
+    }
+    uint32_t image_size = 0;
+    char *image_buffer;
     int ret = ERR_NONE;
-    ret = do_read(out_img_id, res, &image_buffer, &image_size, fs_file);
+
+    ret = do_read(out_img_id, res, &image_buffer, &image_size, &fs_file);
     if (ret != ERR_NONE)
     {
         return reply_error_msg(connection, ret);
     }
-    const char *headers = "Content-Type: image/jpeg";
-
-    return http_reply(connection, HTTP_OK, headers, image_buffer, image_size);
+    // const char *headers = "Content-Type: image/jpeg\r\n";
+    return http_reply(connection, HTTP_OK, "Content-Type: image/jpeg" HTTP_LINE_DELIM, image_buffer, image_size);
 }
 
 int handle_delete_call(struct http_message *msg, int connection)
 {
-    char *out_img_id = NULL;
-    http_get_var(msg->uri, "img_id", out_img_id, MAX_IMG_ID);
+    char out_img_id[MAX_IMG_ID];
+    if(http_get_var(&msg->uri, "img_id", out_img_id, MAX_IMG_ID) == 0) {
+        return reply_error_msg(connection, ERR_NOT_ENOUGH_ARGUMENTS);
+    }
     int ret = ERR_NONE;
-    ret = do_delete(out_img_id, fs_file);
+    ret = do_delete(out_img_id, &fs_file);
     if (ret != ERR_NONE) {
         return reply_error_msg(connection, ret);
     }
-
-    const char *headers = "Location: http://<URL>/index.html"; //TODO : URL and content_length in header?
-    return http_reply(connection, HTTP_OK, headers, "", 0);
+    return reply_302_msg(connection);
 }
 
 int handle_insert_call(struct http_message *msg, int connection)
 {
+    char out_img_id[MAX_IMG_ID];
+
+    if (http_get_var(&msg->uri, "name", out_img_id, MAX_IMG_ID) == 0) {
+        return reply_error_msg(connection, ERR_NOT_ENOUGH_ARGUMENTS);
+    }
+
+    char *image_data = (char *)malloc(msg->body.len);
+    if (!image_data) {
+        return reply_error_msg(connection, ERR_OUT_OF_MEMORY);
+    }
+    
+    memcpy(image_data, msg->body.val, msg->body.len);
+    
+    int ret = do_insert(image_data, msg->body.len, out_img_id, &fs_file);
+    free(image_data);
+
+    if (ret != ERR_NONE) {
+        return reply_error_msg(connection, ret);
+    }
+    
     return reply_302_msg(connection);
 }
 
@@ -166,7 +191,6 @@ int handle_insert_call(struct http_message *msg, int connection)
 int handle_http_message(struct http_message *msg, int connection)
 {
     M_REQUIRE_NON_NULL(msg);
-
     if (http_match_verb(&msg->uri, "/") || http_match_uri(msg, "/index.html"))
     {
         return http_serve_file(connection, BASE_FILE);
@@ -176,13 +200,13 @@ int handle_http_message(struct http_message *msg, int connection)
                  connection,
                  (int)msg->uri.len, msg->uri.val);
     if (http_match_uri(msg, URI_ROOT "/list"))
-        return handle_list_call(connection);
+        return handle_list_call(msg, connection);
     if (http_match_uri(msg, URI_ROOT "/insert") && http_match_verb(&msg->method, "POST"))
-        return handle_insert_call(connection);
+        return handle_insert_call(msg, connection);
     if (http_match_uri(msg, URI_ROOT "/read"))
-        return handle_read_call(connection);
+        return handle_read_call(msg, connection);
     if (http_match_uri(msg, URI_ROOT "/delete"))
-        return handle_delete_call(connection);
+        return handle_delete_call(msg, connection);
 
     return reply_error_msg(connection, ERR_INVALID_COMMAND);
 }

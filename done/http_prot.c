@@ -170,8 +170,10 @@ int http_parse_message(const char *stream, size_t bytes_received, struct http_me
 
     if (*content_len <= 0)   //TODO check afterkey null ?
         return 1;
-    if (after_key == NULL || strlen(after_key) != *content_len) //TODO less or equal
-        return 0;
+    // if (after_key == NULL || strlen(after_key) < *content_len){ //TODO less or equal
+    //     return 0;}
+    if (after_key == NULL || bytes_received - (after_key - stream) < *content_len){ //TODO less or equal
+         return 0;}
 
     out->body.val = after_key;
     out->body.len = *content_len;

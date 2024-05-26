@@ -11,6 +11,8 @@
 int tcp_server_init(uint16_t port){
 
 int fd = socket(AF_INET, SOCK_STREAM, 0);
+int option = 1;   //TODO REMOVE
+setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
 
 if(fd == -1){
     perror("Error creating socket");

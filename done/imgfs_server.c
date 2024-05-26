@@ -44,10 +44,10 @@ static void set_signal_handler(void)
 
 int main (int argc, char *argv[]) //TODO : Is it normal that when we change the port (8000 -> 7500)=> doesn't work
 {
+    set_signal_handler();  //TODO remove
     server_startup(argc, argv);
     int ret = ERR_NONE;
     while((ret = http_receive()) == ERR_NONE);
-    set_signal_handler();
 
-    return ret;
+    return 0;
 }

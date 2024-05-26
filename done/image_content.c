@@ -43,19 +43,18 @@ int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
     M_REQUIRE_NON_NULL(imgfs_file);
     M_REQUIRE_NON_NULL(imgfs_file->file);
 
-    if (index < 0 || index >= imgfs_file->header.max_files)
-        return ERR_INVALID_IMGID;
+    if (index < 0 || index >= imgfs_file->header.max_files){
+        return ERR_INVALID_IMGID;}
 
-    if (!imgfs_file->metadata[index].is_valid)
-        return ERR_INVALID_IMGID;
+    if (!imgfs_file->metadata[index].is_valid){
+        return ERR_INVALID_IMGID;}
 
-    if (resolution == ORIG_RES)
-        return ERR_NONE;
+    if (resolution == ORIG_RES){
+        return ERR_NONE;}
 
     // Check if image already exists in given resolution
-    if (imgfs_file->metadata[index].size[resolution])
-        return ERR_NONE;
-
+    if (imgfs_file->metadata[index].size[resolution]){
+        return ERR_NONE;}
     // Find the correct width according to the resolution
     uint16_t width = (resolution == THUMB_RES) ? imgfs_file->header.resized_res[THUMB_RES_WIDTH_INDEX] : imgfs_file->header.resized_res[SMALL_RES_WIDTH_INDEX];
 

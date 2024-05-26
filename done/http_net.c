@@ -18,6 +18,8 @@
 #include "socket_layer.h"
 #include "error.h"
 #include "imgfs.h"
+#include <string.h>
+
 
 static int passive_socket = -1;
 static EventCallback cb; //TODO : should I change this?
@@ -80,7 +82,7 @@ MK_OUR_ERR(ERR_IO);
     return &our_ERR_NONE;
 }*/
 
-static void *handle_connection(void *arg) {
+/*static void *handle_connection(void *arg) {
     if (arg == NULL) return &our_ERR_INVALID_ARGUMENT;
     int *socket_fd = (int *)arg;
     char *buffer = malloc(MAX_HEADER_SIZE + 1);
@@ -141,7 +143,6 @@ static void *handle_connection(void *arg) {
                 return &our_ERR_IO;
             }
         }
-
         // Check if messsage has been received completely
         if (parse_result > 0) {
             int callback_result = cb(&message, *socket_fd);
@@ -150,39 +151,28 @@ static void *handle_connection(void *arg) {
                 close(*socket_fd);
                 return &callback_result;
             }
-
-            // Send HTTP reply
-            /*const char status;
-            if (strstr(buffer, "test: ok")) {
-                status = HTTP_OK;
-            } else {
-                status = HTTP_BAD_REQUEST;
-            }*/
-
-            // Check for "test: ok" header to determine the status //TODO: Should do this?
-            int found = NOT_FOUND;
-            for (size_t i = 0; i < message.num_headers; ++i) {
-                if (strncmp(message.headers[i].key.val, "test", message.headers[i].key.len) == 0 &&
-                    strncmp(message.headers[i].value.val, "ok", message.headers[i].value.len) == 0) {
-                    found = FOUND;
-                    break;
-                }
-            }
-
-            const char *status;
-            if (found == FOUND) {
-                status = HTTP_OK;
-            } else {
-                status = HTTP_BAD_REQUEST;
-            }
-
-            int ret = http_reply(*socket_fd, status, buffer, "", 0); 
-            if (ret != ERR_NONE) {
-                free(buffer);
-                close(*socket_fd);
-                return &our_ERR_IO;
-            }
             
+            // Check for "test: ok" header to determine the status //TODO: Should do this?
+            // int found = NOT_FOUND;
+            // for (size_t i = 0; i < message.num_headers; ++i) {
+            //     if (strncmp(message.headers[i].key.val, "test", message.headers[i].key.len) == 0 &&
+            //         strncmp(message.headers[i].value.val, "ok", message.headers[i].value.len) == 0) {
+            //         found = FOUND;
+            //         break;
+            //     }
+            // }
+            // const char *status;
+            // if (found == FOUND) {
+            //     status = HTTP_OK;
+            // } else {
+            //     status = HTTP_BAD_REQUEST;
+            // }
+            // int ret = http_reply(*socket_fd, HTTP_OK, buffer, "", 0); 
+            // if (ret != ERR_NONE) {
+            //     free(buffer);
+            //     close(*socket_fd);
+            //     return &our_ERR_IO;
+            // }
             // Reset variables for a new round of tcp_read
             total_read = 0;
             extended = 0;
@@ -193,8 +183,85 @@ static void *handle_connection(void *arg) {
     free(buffer);
     close(*socket_fd);
     return &our_ERR_NONE;
-}
+} */
 
+static void *handle_connection(void *arg) {
+    if (arg == NULL) return &our_ERR_INVALID_ARGUMENT;
+    int *socket_fd = (int *)arg;
+    int buffer_size = MAX_HEADER_SIZE + 1;
+    char *buffer = malloc(buffer_size);
+    if (!buffer) {
+        close(*socket_fd);
+        return &our_ERR_IO;
+    }
+    int total_read = 0, currently_read = 0 , extended = 0, content_len = 0;
+    struct http_message message;
+    memset(&message, 0, sizeof(struct http_message));
+
+    while (1) {
+        // Read data from socket
+        currently_read = tcp_read(*socket_fd, buffer + total_read, buffer_size - total_read-1);
+        if (currently_read < 0) {
+            free(buffer);
+            close(*socket_fd);
+            return &our_ERR_IO;
+        } 
+        total_read += currently_read;
+        buffer[total_read] = '\0';
+
+        int parse_result = http_parse_message(buffer, total_read, &message, &content_len);
+        if (parse_result < 0) {
+            free(buffer);
+            close(*socket_fd);
+            return &parse_result;
+        }
+       
+       // Check if messsage has not been received completely
+        if (parse_result == 0) {
+             if (content_len > 0) {
+                if (!extended) {
+                    buffer_size = MAX_HEADER_SIZE + content_len + 1;
+                    buffer = realloc(buffer, buffer_size);
+                    if (!buffer) {
+                        free(buffer);
+                        close(*socket_fd);
+                        return &our_ERR_IO;
+                    }
+                    extended = 1;
+                }
+                continue;
+            } else {
+                free(buffer);
+                close(*socket_fd);
+                return &our_ERR_IO;
+            }
+        }
+
+        // Check if messsage has been received completely
+        if (parse_result > 0) {
+            buffer_size = MAX_HEADER_SIZE + 1;
+            int callback_result = cb(&message, *socket_fd);
+            if (callback_result != ERR_NONE) {
+                free(buffer);
+                close(*socket_fd);
+                return &callback_result;
+            }
+            // Reset variables for a new round of tcp_read
+            total_read = 0;
+            extended = 0;
+            memset(&message, 0, sizeof(struct http_message));
+            buffer_size = MAX_HEADER_SIZE + 1;
+            buffer = realloc(buffer, buffer_size);
+            if (!buffer) {
+                free(buffer);
+                close(*socket_fd);
+                return &our_ERR_IO;}
+        }
+    }
+    free(buffer);
+    close(*socket_fd);
+    return &our_ERR_NONE;
+}
 
 /*******************************************************************
  * Init connection
@@ -292,46 +359,43 @@ int http_serve_file(int connection, const char* filename)
     return ret;
 }
 
-/*******************************************************************
- * Create and send HTTP reply
- */
-int http_reply(int connection, const char* status, const char* headers, const char *body, size_t body_len)
-{
+// /*******************************************************************
+//  * Create and send HTTP reply
+//  */
+int http_reply(int connection, const char* status, const char* headers, const char *body, size_t body_len) {
     M_REQUIRE_NON_NULL(status);
     M_REQUIRE_NON_NULL(headers);
 
-    const char* new_header;
-    if(strlen(headers) > 1){
-        new_header =calloc(strlen(headers) - 1, sizeof(char));
-        if (new_header == NULL) {
-            return ERR_OUT_OF_MEMORY;
-        }
-        strncpy(new_header, headers, strlen(headers) - 2);
-    } else {
-        new_header = "";
-    }
+    size_t content_length_size = snprintf(NULL, 0, "%zu", body_len);
 
-    size_t header_size = strlen(HTTP_PROTOCOL_ID) + strlen(status) + strlen(HTTP_LINE_DELIM) + strlen(new_header) + strlen("Content-Length: ") + snprintf(NULL, 0, "%zu", body_len) + strlen(HTTP_HDR_END_DELIM);
-    size_t buffer_size = header_size + body_len;
+    size_t header_size = strlen(HTTP_PROTOCOL_ID) + strlen(status) + strlen(HTTP_LINE_DELIM) +
+                         strlen(headers) + strlen("Content-Length: ") + content_length_size +
+                         strlen(HTTP_HDR_END_DELIM);
 
-    char *buffer = calloc(1, buffer_size +1);
+    size_t total_size = header_size + body_len + 1;
+
+    char *buffer = calloc(1, total_size);
     if (buffer == NULL) {
         return ERR_OUT_OF_MEMORY;
     }
+    
+    int header_length = snprintf(buffer, total_size, "%s%s%s%sContent-Length: %zu%s",
+                                 HTTP_PROTOCOL_ID, status, HTTP_LINE_DELIM, headers, body_len, HTTP_HDR_END_DELIM);
 
-    if(snprintf(buffer, header_size +1, "%s%s%s%sContent-Length: %zu%s", HTTP_PROTOCOL_ID, status, HTTP_LINE_DELIM, new_header, body_len, HTTP_HDR_END_DELIM) <= 0){
+    if (header_length < 0) {
         free(buffer);
         return ERR_IO;
     }
 
-    if (body && body_len > 0) {
-        memcpy(buffer + header_size, body, body_len);
+    if (body) {
+        memcpy(buffer + header_length, body, body_len);
     }
 
-    if(tcp_send(connection, buffer, strlen(buffer)) == -1){  //TODO send -1 without null
+    if (tcp_send(connection, buffer, header_length + body_len) == -1) {
         free(buffer);
         return ERR_IO;
     }
     free(buffer);
     return ERR_NONE;
 }
+
