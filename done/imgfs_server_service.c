@@ -114,7 +114,9 @@ int handle_list_call(struct http_message *msg, int connection) // TODO : error h
         return reply_error_msg(connection, ret);
     }
     int body_size = strlen(json);
-    return http_reply(connection, HTTP_OK, "Content-Type: application/json" HTTP_LINE_DELIM, json, body_size);
+    ret = http_reply(connection, HTTP_OK, "Content-Type: application/json" HTTP_LINE_DELIM, json, body_size);
+    free(json);
+    return ret;
 }
 
 int handle_read_call(struct http_message *msg, int connection) // TODO : error handling
@@ -136,14 +138,14 @@ int handle_read_call(struct http_message *msg, int connection) // TODO : error h
     uint32_t image_size = 0;
     char *image_buffer;
     int ret = ERR_NONE;
-
     ret = do_read(out_img_id, res, &image_buffer, &image_size, &fs_file);
     if (ret != ERR_NONE)
     {
         return reply_error_msg(connection, ret);
     }
-    // const char *headers = "Content-Type: image/jpeg\r\n";
-    return http_reply(connection, HTTP_OK, "Content-Type: image/jpeg" HTTP_LINE_DELIM, image_buffer, image_size);
+    ret = http_reply(connection, HTTP_OK, "Content-Type: image/jpeg" HTTP_LINE_DELIM, image_buffer, image_size);
+    free(image_buffer);
+    return ret;
 }
 
 int handle_delete_call(struct http_message *msg, int connection)
@@ -181,7 +183,6 @@ int handle_insert_call(struct http_message *msg, int connection)
     if (ret != ERR_NONE) {
         return reply_error_msg(connection, ret);
     }
-    
     return reply_302_msg(connection);
 }
 

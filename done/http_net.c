@@ -197,7 +197,6 @@ static void *handle_connection(void *arg) {
     int total_read = 0, currently_read = 0 , extended = 0, content_len = 0;
     struct http_message message;
     memset(&message, 0, sizeof(struct http_message));
-
     while (1) {
         // Read data from socket
         currently_read = tcp_read(*socket_fd, buffer + total_read, buffer_size - total_read-1);
@@ -205,20 +204,21 @@ static void *handle_connection(void *arg) {
             free(buffer);
             close(*socket_fd);
             return &our_ERR_IO;
-        } 
+        }
+        if(currently_read == 0){
+            break;
+        }
         total_read += currently_read;
         buffer[total_read] = '\0';
-
         int parse_result = http_parse_message(buffer, total_read, &message, &content_len);
         if (parse_result < 0) {
             free(buffer);
             close(*socket_fd);
             return &parse_result;
         }
-       
        // Check if messsage has not been received completely
         if (parse_result == 0) {
-             if (content_len > 0) {
+            if (content_len > 0) {
                 if (!extended) {
                     buffer_size = MAX_HEADER_SIZE + content_len + 1;
                     buffer = realloc(buffer, buffer_size);
@@ -228,30 +228,27 @@ static void *handle_connection(void *arg) {
                         return &our_ERR_IO;
                     }
                     extended = 1;
+                } else {
+                    continue;
                 }
-                continue;
             } else {
                 free(buffer);
                 close(*socket_fd);
                 return &our_ERR_IO;
             }
         }
-
-        // Check if messsage has been received completely
         if (parse_result > 0) {
-            buffer_size = MAX_HEADER_SIZE + 1;
             int callback_result = cb(&message, *socket_fd);
             if (callback_result != ERR_NONE) {
                 free(buffer);
                 close(*socket_fd);
                 return &callback_result;
             }
-            // Reset variables for a new round of tcp_read
             total_read = 0;
             extended = 0;
             memset(&message, 0, sizeof(struct http_message));
             buffer_size = MAX_HEADER_SIZE + 1;
-            buffer = realloc(buffer, buffer_size);
+            buffer = realloc(buffer, MAX_HEADER_SIZE + 1);
             if (!buffer) {
                 free(buffer);
                 close(*socket_fd);

@@ -75,10 +75,8 @@ int do_list(const struct imgfs_file *imgfs_file, enum do_list_mode output_mode, 
         {
             return ERR_RUNTIME;
         }
-
         return ERR_NONE;
     }
     else
-
         return ERR_IO;
 }
