@@ -22,6 +22,8 @@ static struct imgfs_file fs_file;
 static uint16_t server_port;
 
 #define URI_ROOT "/imgfs"
+pthread_mutex_t imgfs_mutex;
+
 
 /********************************************************************/ /**
                                                                         * Startup function. Create imgFS file and load in-memory structure.
@@ -43,6 +45,10 @@ int server_startup(int argc, char **argv)
     if (server_port <= 0)
     {
         server_port = DEFAULT_LISTENING_PORT;
+    }
+    if (pthread_mutex_init(&imgfs_mutex, NULL) != 0) {
+        vips_shutdown();
+        return ERR_IO;
     }
 
     int ret = ERR_NONE;
@@ -71,6 +77,8 @@ void server_shutdown(void)
     http_close();
     do_close(&fs_file);
     vips_shutdown();
+    pthread_mutex_destroy(&imgfs_mutex);
+
 }
 
 /**********************************************************************
@@ -108,7 +116,9 @@ int handle_list_call(struct http_message *msg, int connection) // TODO : error h
 {
     char *json = NULL;
     int ret = ERR_NONE;
+    pthread_mutex_lock(&imgfs_mutex);
     ret = do_list(&fs_file, JSON, &json);
+    pthread_mutex_unlock(&imgfs_mutex);
     if (ret != ERR_NONE)
     {
         return reply_error_msg(connection, ret);
@@ -138,7 +148,9 @@ int handle_read_call(struct http_message *msg, int connection) // TODO : error h
     uint32_t image_size = 0;
     char *image_buffer;
     int ret = ERR_NONE;
+    pthread_mutex_lock(&imgfs_mutex);
     ret = do_read(out_img_id, res, &image_buffer, &image_size, &fs_file);
+    pthread_mutex_unlock(&imgfs_mutex);
     if (ret != ERR_NONE)
     {
         return reply_error_msg(connection, ret);
@@ -155,7 +167,9 @@ int handle_delete_call(struct http_message *msg, int connection)
         return reply_error_msg(connection, ERR_NOT_ENOUGH_ARGUMENTS);
     }
     int ret = ERR_NONE;
+    pthread_mutex_lock(&imgfs_mutex);
     ret = do_delete(out_img_id, &fs_file);
+    pthread_mutex_unlock(&imgfs_mutex);
     if (ret != ERR_NONE) {
         return reply_error_msg(connection, ret);
     }
@@ -165,21 +179,18 @@ int handle_delete_call(struct http_message *msg, int connection)
 int handle_insert_call(struct http_message *msg, int connection)
 {
     char out_img_id[MAX_IMG_ID];
-
     if (http_get_var(&msg->uri, "name", out_img_id, MAX_IMG_ID) == 0) {
         return reply_error_msg(connection, ERR_NOT_ENOUGH_ARGUMENTS);
     }
-
     char *image_data = (char *)malloc(msg->body.len);
     if (!image_data) {
         return reply_error_msg(connection, ERR_OUT_OF_MEMORY);
     }
-    
     memcpy(image_data, msg->body.val, msg->body.len);
-    
+    pthread_mutex_lock(&imgfs_mutex);
     int ret = do_insert(image_data, msg->body.len, out_img_id, &fs_file);
+    pthread_mutex_unlock(&imgfs_mutex);
     free(image_data);
-
     if (ret != ERR_NONE) {
         return reply_error_msg(connection, ret);
     }
@@ -191,6 +202,7 @@ int handle_insert_call(struct http_message *msg, int connection)
  ********************************************************************** */
 int handle_http_message(struct http_message *msg, int connection)
 {
+    printf("URI: %.*s\n",(int)msg->uri.len, msg->uri.val);
     M_REQUIRE_NON_NULL(msg);
     if (http_match_verb(&msg->uri, "/") || http_match_uri(msg, "/index.html"))
     {
