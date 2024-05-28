@@ -2,6 +2,7 @@
 #include <string.h>
 #include "util.h"
 #include "error.h"
+#include <stdlib.h>
 
 /*************************************************************************
  * Checks whether the `message` URI starts with the provided `target_uri`
@@ -79,9 +80,12 @@ int http_get_var(const struct http_string *url, const char *name, char *out, siz
  * Writes the message, until the delimiter, in the output struct and returns the next char after the delimiter
  ************************************************************************************************************ */
 static const char *get_next_token(const char *message, const char *delimiter, struct http_string *output)
-{
-    M_REQUIRE_NON_NULL(message);
-    M_REQUIRE_NON_NULL(delimiter);
+{   //TODO : wrong value returned (warning)
+    /*M_REQUIRE_NON_NULL(message); 
+    M_REQUIRE_NON_NULL(delimiter);*/
+
+    if (message == NULL) return NULL; //TODO : useful? I don't think so
+    if (delimiter == NULL) return NULL;
 
     const char *end = strstr(message, delimiter);
     if (!end) {
@@ -106,8 +110,9 @@ static const char *get_next_token(const char *message, const char *delimiter, st
  ************************************************************************************************************ */
 static const char *http_parse_headers(const char *header_start, struct http_message *output)
 {
-    M_REQUIRE_NON_NULL(header_start);
-    M_REQUIRE_NON_NULL(output);
+    //TODO : wrong value returned (warning)
+    /*M_REQUIRE_NON_NULL(header_start);
+    M_REQUIRE_NON_NULL(output);*/
 
     const char *remaining = header_start;
     struct http_string pair;

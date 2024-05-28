@@ -48,14 +48,14 @@ int help(int useless _unused, char **useless_too _unused)
     printf("  create <imgFS_filename> [options]: create a new imgFS.\n");
     printf("      options are:\n");
     printf("          -max_files <MAX_FILES>: maximum number of files.\n");
-    printf("                                  default value is 128\n");
+    printf("                                  default value is %" PRIu32 "\n", default_max_files);
     printf("                                  maximum value is 4294967295\n");
     printf("          -thumb_res <X_RES> <Y_RES>: resolution for thumbnail images.\n");
-    printf("                                  default value is 64x64\n");
-    printf("                                  maximum value is 128x128\n");
+    printf("                                  default value is %" PRIu16 "x%" PRIu16 "\n", default_thumb_res, default_thumb_res);
+    printf("                                  maximum value is %" PRIu16 "x%" PRIu16 "\n", MAX_THUMB_RES, MAX_THUMB_RES);
     printf("          -small_res <X_RES> <Y_RES>: resolution for small images.\n");
-    printf("                                  default value is 256x256\n");
-    printf("                                  maximum value is 512x512\n");
+    printf("                                  default value is %" PRIu16 "x%" PRIu16 "\n", default_small_res, default_small_res);
+    printf("                                  maximum value is %" PRIu16 "x%" PRIu16 "\n", MAX_SMALL_RES, MAX_SMALL_RES);
     printf("  read   <imgFS_filename> <imgID> [original|orig|thumbnail|thumb|small]:\n");
     printf("      read an image from the imgFS and save it to a file.\n");
     printf("      default resolution is \"original\".\n");
@@ -70,7 +70,7 @@ int help(int useless _unused, char **useless_too _unused)
  *******************************************************************/
 static void create_name(const char *img_id, int resolution, char **new_name)
 {
-    *new_name = calloc(1, MAX_IMGFS_NAME);
+    *new_name = calloc(1, MAX_IMGFS_NAME); //TODO : handle new_name == NULL? MAX_IMGFS_NAME + 1?
 
     const char *resolution_suffix;
 
@@ -93,7 +93,19 @@ static void create_name(const char *img_id, int resolution, char **new_name)
         break;
     }
 
-    if (strcpy(*new_name, strcat(strcat(img_id, resolution_suffix), ".jpg")) == NULL)
+    /*if (strcpy(*new_name, strcat(strcat(img_id, resolution_suffix), ".jpg")) == NULL)
+    {
+        free(*new_name);
+    }*/
+
+    // Create a temporary buffer for the concatenation
+    char temp[MAX_IMGFS_NAME];
+    snprintf(temp, sizeof(temp), "%s%s.jpg", img_id, resolution_suffix);
+
+    // Copy the result to the new_name
+    strcpy(*new_name, temp);
+
+    if (*new_name == NULL)
     {
         free(*new_name);
     }

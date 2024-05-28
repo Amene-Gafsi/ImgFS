@@ -19,7 +19,7 @@ int do_name_and_content_dedup(struct imgfs_file *imgfs_file, uint32_t index)
     int duplicate = EMPTY;
     for (uint32_t i = 0; i < imgfs_file->header.max_files; i++)
     {
-        if (i != index && imgfs_file->metadata[i].is_valid)
+        if (i != index && imgfs_file->metadata[i].is_valid == NON_EMPTY)
         {
             if (!strcmp(imgfs_file->metadata[i].img_id, imgfs_file->metadata[index].img_id))
             {

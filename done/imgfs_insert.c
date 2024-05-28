@@ -33,7 +33,7 @@ int do_insert(const char *image_buffer, size_t image_size, const char *img_id, s
         // find an empty entry in the metadata table
         if (!imgfs_file->metadata[i].is_valid)
         {
-            if (SHA256(image_buffer, image_size, imgfs_file->metadata[i].SHA) == NULL)
+            if (SHA256((const unsigned char *)image_buffer, image_size, imgfs_file->metadata[i].SHA) == NULL)
             {
                 return ERR_IO;
             }

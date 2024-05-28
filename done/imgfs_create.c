@@ -25,17 +25,26 @@ int do_create(const char *imgfs_filename, struct imgfs_file *imgfs_file)
     if (imgfs_file->metadata == NULL)
         return ERR_OUT_OF_MEMORY;
 
+    // TODO : is this what is supposed to be done?
+    // Initialize is_valid field 
+    for (uint32_t i = 0; i < imgfs_file->header.max_files; ++i) {
+        imgfs_file->metadata[i].is_valid = 0;
+    }
+
     size_t items_written = EMPTY;
 
     // Write the imgfs_file to the file, whose path is given by imgfs_filename, in the database
     FILE *imgfs = fopen(imgfs_filename, "wb");
-    if (imgfs == NULL)
+    if (imgfs == NULL) {
+        free(imgfs_file->metadata);
         return ERR_INVALID_ARGUMENT;
+    }  
 
     imgfs_file->file = imgfs;
 
     if (fwrite(&(imgfs_file->header), sizeof(struct imgfs_header), ONE_ELEMENT, imgfs_file->file) != ONE_ELEMENT)
     {
+        free(imgfs_file->metadata);
         fclose(imgfs_file->file);
         return ERR_IO;
     }
@@ -45,6 +54,7 @@ int do_create(const char *imgfs_filename, struct imgfs_file *imgfs_file)
 
     if (fwrite(imgfs_file->metadata, sizeof(struct img_metadata), imgfs_file->header.max_files, imgfs_file->file) != imgfs_file->header.max_files)
     {
+        free(imgfs_file->metadata);
         fclose(imgfs_file->file);
         ret = ERR_IO;
     }

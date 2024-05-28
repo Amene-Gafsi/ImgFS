@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "util.h"
 #include <json-c/json.h>
+#include <string.h>
 
 /**********************************************************************
  * Displays the imgFS metadata on stdout
@@ -21,7 +22,7 @@ int do_list(const struct imgfs_file *imgfs_file, enum do_list_mode output_mode, 
         {
             if (imgfs_file->metadata != NULL)
             {
-                if ((imgfs_file->metadata)[i].is_valid)
+                if ((imgfs_file->metadata)[i].is_valid == NON_EMPTY)
                 {
                     print_metadata(&(imgfs_file->metadata)[i]);
                     images++;

@@ -38,7 +38,7 @@ int free_images(void *original_image, void *resized_image, VipsImage *original_v
 int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
 { // Check if arguments are valid
     if (resolution != THUMB_RES && resolution != SMALL_RES && resolution != ORIG_RES)
-        return ERR_INVALID_ARGUMENT;
+        return ERR_RESOLUTIONS; //TODO : correct?
 
     M_REQUIRE_NON_NULL(imgfs_file);
     M_REQUIRE_NON_NULL(imgfs_file->file);
@@ -46,7 +46,7 @@ int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
     if (index < 0 || index >= imgfs_file->header.max_files){
         return ERR_INVALID_IMGID;}
 
-    if (!imgfs_file->metadata[index].is_valid){
+    if (imgfs_file->metadata[index].is_valid == EMPTY){
         return ERR_INVALID_IMGID;}
 
     if (resolution == ORIG_RES){
@@ -65,12 +65,16 @@ int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
 
     // Resize the original image to the requested resolution and free allocated memory in case of error
     void *orig_img = calloc(1, imgfs_file->metadata[index].size[ORIG_RES]);
+    if (orig_img == NULL) {
+        return ERR_IO;
+    }
     if (fread(orig_img, imgfs_file->metadata[index].size[ORIG_RES], ONE_ELEMENT, imgfs_file->file) != ONE_ELEMENT)
     {
         free(orig_img);
         return ERR_IO;
     }
 
+    //TODO : missing arguments
     VipsImage *vips_orig_img = NULL;
     if (vips_jpegload_buffer(orig_img, imgfs_file->metadata[index].size[ORIG_RES], &vips_orig_img, NULL))
     {
@@ -126,7 +130,7 @@ int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
         free_images(orig_img, resized_img, vips_orig_img, vips_resized_img);
         return ERR_IO;
     }
-
+    //TODO : not write whole metadata array
     if (fwrite(imgfs_file->metadata, sizeof(struct img_metadata), imgfs_file->header.max_files, imgfs_file->file) != imgfs_file->header.max_files)
     {
         free_images(orig_img, resized_img, vips_orig_img, vips_resized_img);
