@@ -17,7 +17,7 @@ int do_delete(const char *img_id, struct imgfs_file *imgfs_file)
 
     int image = NOT_FOUND;
 
-    if (metadata == NULL)
+    if (imgfs_file->metadata == NULL)
     {
         return ERR_OUT_OF_MEMORY; // Ensure memory allocation succeeded
     }
@@ -44,7 +44,7 @@ int do_delete(const char *img_id, struct imgfs_file *imgfs_file)
     //TODO : write only one element of the of the metadata array
     if (!fseek(imgfs_file->file, sizeof(struct imgfs_header), SEEK_SET))
     {
-        if (fwrite(metadata, sizeof(struct img_metadata), imgfs_file->header.max_files, imgfs_file->file) == imgfs_file->header.max_files)
+        if (fwrite(imgfs_file->metadata, sizeof(struct img_metadata), imgfs_file->header.max_files, imgfs_file->file) == imgfs_file->header.max_files)
         {
             if (!fseek(imgfs_file->file, 0, SEEK_SET))
             {

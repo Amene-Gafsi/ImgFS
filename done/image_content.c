@@ -57,7 +57,7 @@ int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
         return ERR_NONE;}
     // Find the correct width according to the resolution
     uint16_t width = (resolution == THUMB_RES) ? imgfs_file->header.resized_res[THUMB_RES_WIDTH_INDEX] : imgfs_file->header.resized_res[SMALL_RES_WIDTH_INDEX];
-
+    uint16_t height = (resolution == THUMB_RES) ? imgfs_file->header.resized_res[THUMB_RES_WIDTH_INDEX + 1] : imgfs_file->header.resized_res[SMALL_RES_WIDTH_INDEX + 1];
     if (fseek(imgfs_file->file, (long)imgfs_file->metadata[index].offset[ORIG_RES], SEEK_SET))
     {
         return ERR_IO;
@@ -74,9 +74,9 @@ int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
         return ERR_IO;
     }
 
-    //TODO : missing arguments
+    //TODO : missing arguments 
     VipsImage *vips_orig_img = NULL;
-    if (vips_jpegload_buffer(orig_img, imgfs_file->metadata[index].size[ORIG_RES], &vips_orig_img, "height"))
+    if (vips_jpegload_buffer(orig_img, imgfs_file->metadata[index].size[ORIG_RES], &vips_orig_img, NULL))
     {
         free(orig_img);
         return ERR_IMGLIB;
