@@ -29,14 +29,12 @@ typedef struct
 } command_mapping;
 
 // Create commands
-command_mapping list = {"list", do_list_cmd},
-                create = {"create", do_create_cmd},
-                insert = {"insert", do_insert_cmd},
-                read = {"read", do_read_cmd},
-                delete = {"delete", do_delete_cmd},
-                help_command = {"help", help};
-
-command_mapping commands[NB_COMMANDS] = {list, create, insert, read, delete, help_command};
+command_mapping list_cmd = {"list", do_list_cmd},
+                create_cmd = {"create", do_create_cmd},
+                insert_cmd = {"insert", do_insert_cmd},
+                read_cmd = {"read", do_read_cmd},
+                delete_cmd = {"delete", do_delete_cmd},
+                help_cmd = {"help", help};
 
 int main(int argc, char *argv[])
 {   
@@ -45,7 +43,7 @@ int main(int argc, char *argv[])
     //TODO : correct?
     if (VIPS_INIT(argv[0]) != 0) {
         // Handle initialization failure
-        ret = ERR_VIPS_INIT_FAILED
+        ret = ERR_INVALID_ARGUMENT; //TODO : correct error?
         fprintf(stderr, "ERROR: %s\n", ERR_MSG(ret));
         return ret;
     }
@@ -60,6 +58,8 @@ int main(int argc, char *argv[])
          * TODO WEEK 07: THIS PART SHALL BE EXTENDED.
          * **********************************************************************
          */
+        //TODO : this should also be outside main? doesn't work if it should
+        command_mapping commands[NB_COMMANDS] = {list_cmd, create_cmd, insert_cmd, read_cmd, delete_cmd, help_cmd};
 
         char *current_command = argv[FIRST_ARG];
         int command = NOT_FOUND;
