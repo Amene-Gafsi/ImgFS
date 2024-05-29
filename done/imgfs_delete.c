@@ -29,9 +29,6 @@ int do_delete(const char *img_id, struct imgfs_file *imgfs_file)
             {
                 image = FOUND;
                 index = i;
-                imgfs_file->header.version++; 
-                imgfs_file->header.nb_files--;
-                imgfs_file->metadata[i].is_valid = EMPTY;
                 break;
             }
     }
@@ -40,6 +37,8 @@ int do_delete(const char *img_id, struct imgfs_file *imgfs_file)
     {
         return ERR_IMAGE_NOT_FOUND;
     }
+
+
 
     // Changes are made first to the metadata (memory, then disk), then to the header if successful
 
@@ -58,6 +57,13 @@ int do_delete(const char *img_id, struct imgfs_file *imgfs_file)
             }
         }
     }*/
+    uint32_t old_version = imgfs_file->header.version;
+    uint32_t old_nb_files = imgfs_file->header.nb_files;
+
+    imgfs_file->metadata[index].is_valid = EMPTY;
+    imgfs_file->header.version++; 
+    imgfs_file->header.nb_files--;
+
     size_t metadata_offset = sizeof(imgfs_file->header) + index * sizeof(struct img_metadata);
 
     if (!fseek(imgfs_file->file, metadata_offset, SEEK_SET))
@@ -73,6 +79,8 @@ int do_delete(const char *img_id, struct imgfs_file *imgfs_file)
             }
         }
     }
-
+    imgfs_file->metadata[index].is_valid = NON_EMPTY;
+    imgfs_file->header.version = old_version;
+    imgfs_file->header.nb_files = old_nb_files;
     return ERR_IO;
 }

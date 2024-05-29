@@ -85,7 +85,7 @@ int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
     }
 
     VipsImage *vips_resized_img = NULL;
-    if (vips_thumbnail_image(vips_orig_img, &vips_resized_img, width, NULL))
+    if (vips_thumbnail_image(vips_orig_img, &vips_resized_img, width, "height", height, NULL))
     {
         free(orig_img);
         g_object_unref(vips_orig_img);
