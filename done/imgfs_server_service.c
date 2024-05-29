@@ -75,6 +75,7 @@ int server_startup(int argc, char **argv)
                                                                         ********************************************************************** */
 void server_shutdown(void)
 {
+    fprintf(stderr, "Shutting down server...\n");
     http_close();
     do_close(&fs_file);
     vips_shutdown();
