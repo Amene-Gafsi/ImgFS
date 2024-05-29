@@ -137,7 +137,7 @@ int handle_list_call(struct http_message *msg, int connection)
 
 int handle_read_call(struct http_message *msg, int connection) 
 {
-    char out_res[MAX_HEADER_SIZE] = {0};
+    char out_res[MAX_HEADER_SIZE] = {0}; //TODO : null terminator + 1?
     char out_img_id[MAX_IMG_ID] = {0};
 
     if(http_get_var(&msg->uri, "res", out_res, MAX_HEADER_SIZE) == 0) {

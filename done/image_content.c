@@ -55,9 +55,11 @@ int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
     // Check if image already exists in given resolution
     if (imgfs_file->metadata[index].size[resolution]){
         return ERR_NONE;}
+
     // Find the correct width according to the resolution
     uint16_t width = (resolution == THUMB_RES) ? imgfs_file->header.resized_res[THUMB_RES_WIDTH_INDEX] : imgfs_file->header.resized_res[SMALL_RES_WIDTH_INDEX];
     uint16_t height = (resolution == THUMB_RES) ? imgfs_file->header.resized_res[THUMB_RES_WIDTH_INDEX + 1] : imgfs_file->header.resized_res[SMALL_RES_WIDTH_INDEX + 1];
+    
     if (fseek(imgfs_file->file, (long)imgfs_file->metadata[index].offset[ORIG_RES], SEEK_SET))
     {
         return ERR_IO;
@@ -125,13 +127,30 @@ int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
 
     imgfs_file->metadata[index].offset[resolution] = (uint64_t)end_of_file - len;
 
-    if (fseek(imgfs_file->file, sizeof(imgfs_file->header), SEEK_SET))
+    //TODO : not write whole metadata array
+    /*if (fseek(imgfs_file->file, sizeof(imgfs_file->header), SEEK_SET))
     {
         free_images(orig_img, resized_img, vips_orig_img, vips_resized_img);
         return ERR_IO;
     }
-    //TODO : not write whole metadata array
+    
     if (fwrite(imgfs_file->metadata, sizeof(struct img_metadata), imgfs_file->header.max_files, imgfs_file->file) != imgfs_file->header.max_files)
+    {
+        free_images(orig_img, resized_img, vips_orig_img, vips_resized_img);
+        return ERR_IO;
+    }
+
+    return free_images(orig_img, resized_img, vips_orig_img, vips_resized_img);*/
+
+    size_t metadata_offset = sizeof(imgfs_file->header) + index * sizeof(struct img_metadata);
+
+    if (fseek(imgfs_file->file, metadata_offset, SEEK_SET))
+    {
+        free_images(orig_img, resized_img, vips_orig_img, vips_resized_img);
+        return ERR_IO;
+    }
+    
+    if (fwrite(&(imgfs_file->metadata[index]), sizeof(struct img_metadata), ONE_ELEMENT, imgfs_file->file) != ONE_ELEMENT)
     {
         free_images(orig_img, resized_img, vips_orig_img, vips_resized_img);
         return ERR_IO;
