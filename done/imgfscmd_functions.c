@@ -70,7 +70,7 @@ int help(int useless _unused, char **useless_too _unused)
  *******************************************************************/
 static void create_name(const char *img_id, int resolution, char **new_name)
 {
-    *new_name = calloc(1, MAX_IMGFS_NAME); //TODO : handle new_name == NULL? MAX_IMGFS_NAME + 1?
+    *new_name = calloc(1, MAX_IMGFS_NAME + 1); 
 
     const char *resolution_suffix;
 
@@ -93,15 +93,10 @@ static void create_name(const char *img_id, int resolution, char **new_name)
         break;
     }
 
-    /*if (strcpy(*new_name, strcat(strcat(img_id, resolution_suffix), ".jpg")) == NULL)
-    {
-        free(*new_name);
-    }*/
-
     // Create a temporary buffer for the concatenation
-    char temp[MAX_IMGFS_NAME];
+    char temp[MAX_IMGFS_NAME + 1];
     snprintf(temp, sizeof(temp), "%s%s.jpg", img_id, resolution_suffix);
-
+    
     // Copy the result to the new_name
     strcpy(*new_name, temp);
 

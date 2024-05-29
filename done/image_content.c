@@ -38,7 +38,7 @@ int free_images(void *original_image, void *resized_image, VipsImage *original_v
 int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
 { // Check if arguments are valid
     if (resolution != THUMB_RES && resolution != SMALL_RES && resolution != ORIG_RES)
-        return ERR_RESOLUTIONS; //TODO : correct?
+        return ERR_RESOLUTIONS; 
 
     M_REQUIRE_NON_NULL(imgfs_file);
     M_REQUIRE_NON_NULL(imgfs_file->file);
@@ -76,10 +76,10 @@ int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
 
     //TODO : missing arguments
     VipsImage *vips_orig_img = NULL;
-    if (vips_jpegload_buffer(orig_img, imgfs_file->metadata[index].size[ORIG_RES], &vips_orig_img, NULL))
+    if (vips_jpegload_buffer(orig_img, imgfs_file->metadata[index].size[ORIG_RES], &vips_orig_img, "height"))
     {
         free(orig_img);
-        return ERR_IO;
+        return ERR_IMGLIB;
     }
 
     VipsImage *vips_resized_img = NULL;
@@ -87,7 +87,7 @@ int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
     {
         free(orig_img);
         g_object_unref(vips_orig_img);
-        return ERR_IO;
+        return ERR_IMGLIB;
     }
 
     size_t len = 0;
@@ -97,7 +97,7 @@ int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
         free(orig_img);
         g_object_unref(vips_orig_img);
         g_object_unref(vips_resized_img);
-        return ERR_IO;
+        return ERR_IMGLIB;
     }
 
     // Write the resized image at the end of the file

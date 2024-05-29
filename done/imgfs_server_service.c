@@ -22,7 +22,7 @@ static struct imgfs_file fs_file;
 static uint16_t server_port;
 
 #define URI_ROOT "/imgfs"
-pthread_mutex_t imgfs_mutex;
+static pthread_mutex_t imgfs_mutex; 
 
 
 /********************************************************************/ /**
@@ -41,7 +41,8 @@ int server_startup(int argc, char **argv)
     char *filename = argv[1];
 
     if (argc > 2)
-        server_port = atoi(argv[2]);  // TODO : error handling
+        server_port = atoi(argv[2]);
+        if (!server_port) return ERR_INVALID_ARGUMENT; 
     if (server_port <= 0)
     {
         server_port = DEFAULT_LISTENING_PORT;
@@ -59,7 +60,7 @@ int server_startup(int argc, char **argv)
         return ret;
     }
     print_header(&fs_file.header);
-    EventCallback cb = handle_http_message; // TODO added
+    EventCallback cb = handle_http_message; 
 
     if (http_init(server_port, cb) == -1)
     {
@@ -112,11 +113,11 @@ static int reply_302_msg(int connection)
     return http_reply(connection, "302 Found", location, "", 0);
 }
 
-int handle_list_call(struct http_message *msg, int connection) // TODO : error handling
+int handle_list_call(struct http_message *msg, int connection) 
 {
     char *json = NULL;
     int ret = ERR_NONE;
-    pthread_mutex_lock(&imgfs_mutex);
+    pthread_mutex_lock(&imgfs_mutex); //TODO : error handling
     ret = do_list(&fs_file, JSON, &json);
     pthread_mutex_unlock(&imgfs_mutex);
     if (ret != ERR_NONE)
@@ -126,10 +127,14 @@ int handle_list_call(struct http_message *msg, int connection) // TODO : error h
     int body_size = strlen(json);
     ret = http_reply(connection, HTTP_OK, "Content-Type: application/json" HTTP_LINE_DELIM, json, body_size);
     free(json);
+    if (ret != ERR_NONE)
+    {
+        return reply_error_msg(connection, ret);
+    }
     return ret;
 }
 
-int handle_read_call(struct http_message *msg, int connection) // TODO : error handling
+int handle_read_call(struct http_message *msg, int connection) 
 {
     char out_res[MAX_HEADER_SIZE] = {0};
     char out_img_id[MAX_IMG_ID] = {0};
@@ -157,6 +162,10 @@ int handle_read_call(struct http_message *msg, int connection) // TODO : error h
     }
     ret = http_reply(connection, HTTP_OK, "Content-Type: image/jpeg" HTTP_LINE_DELIM, image_buffer, image_size);
     free(image_buffer);
+    if (ret != ERR_NONE)
+    {
+        return reply_error_msg(connection, ret);
+    }
     return ret;
 }
 
@@ -202,7 +211,6 @@ int handle_insert_call(struct http_message *msg, int connection)
  ********************************************************************** */
 int handle_http_message(struct http_message *msg, int connection)
 {
-    printf("URI: %.*s\n",(int)msg->uri.len, msg->uri.val);
     M_REQUIRE_NON_NULL(msg);
     if (http_match_verb(&msg->uri, "/") || http_match_uri(msg, "/index.html"))
     {

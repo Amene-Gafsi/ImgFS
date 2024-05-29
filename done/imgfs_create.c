@@ -25,10 +25,9 @@ int do_create(const char *imgfs_filename, struct imgfs_file *imgfs_file)
     if (imgfs_file->metadata == NULL)
         return ERR_OUT_OF_MEMORY;
 
-    // TODO : is this what is supposed to be done?
     // Initialize is_valid field 
     for (uint32_t i = 0; i < imgfs_file->header.max_files; ++i) {
-        imgfs_file->metadata[i].is_valid = 0;
+        imgfs_file->metadata[i].is_valid = EMPTY;
     }
 
     size_t items_written = EMPTY;
