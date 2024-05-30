@@ -33,28 +33,35 @@ MK_OUR_ERR(ERR_OUT_OF_MEMORY);
 MK_OUR_ERR(ERR_IO);
 
 /*******************************************************************
- * Handle connection
- */
+ * Manages the HTTP connection with the client
+ *******************************************************************/
 static void *handle_connection(void *arg)
-{   //TODO : return error IO
+{ // TODO : free soket ?
+
     sigset_t mask;
     sigemptyset(&mask);
     sigaddset(&mask, SIGINT);
     sigaddset(&mask, SIGTERM);
     pthread_sigmask(SIG_BLOCK, &mask, NULL);
+
     if (arg == NULL)
+    {
         return &our_ERR_INVALID_ARGUMENT;
+    }
+
     int *socket_fd = (int *)arg;
-    int buffer_size = MAX_HEADER_SIZE + 1;
+    int buffer_size = MAX_HEADER_SIZE + NULL_TERMINATOR;
+
     char *buffer = malloc(buffer_size);
-    if (!buffer)
+    if (buffer == NULL)
     {
         close(*socket_fd);
         free(socket_fd);
-        return &our_ERR_IO;
+        return &our_ERR_OUT_OF_MEMORY;
     }
-    int total_read = 0, currently_read = 0, extended = 0, content_len = 0;
+    int total_read = EMPTY, currently_read = EMPTY, extended = EMPTY, content_len = EMPTY;
     struct http_message message;
+
     memset(&message, 0, sizeof(struct http_message));
     while (1)
     {
@@ -71,8 +78,10 @@ static void *handle_connection(void *arg)
         {
             break;
         }
+
         total_read += currently_read;
         buffer[total_read] = '\0';
+
         int parse_result = http_parse_message(buffer, total_read, &message, &content_len);
         if (parse_result < 0)
         {
@@ -88,23 +97,23 @@ static void *handle_connection(void *arg)
             {
                 if (!extended)
                 {
-                    buffer_size = MAX_HEADER_SIZE + content_len + 1;
+                    buffer_size = MAX_HEADER_SIZE + content_len + NULL_TERMINATOR;
                     buffer = realloc(buffer, buffer_size);
                     if (!buffer)
                     {
                         free(buffer);
                         close(*socket_fd);
                         free(socket_fd);
-                        return &our_ERR_IO;
+                        return &our_ERR_OUT_OF_MEMORY;
                     }
-                    extended = 1;
+                    extended = NON_EMPTY;
                 }
                 else
                 {
                     continue;
                 }
             }
-            else
+            else // Should not happen since content_len should be > 0
             {
                 free(buffer);
                 close(*socket_fd);
@@ -125,14 +134,14 @@ static void *handle_connection(void *arg)
             total_read = 0;
             extended = 0;
             memset(&message, 0, sizeof(struct http_message));
-            buffer_size = MAX_HEADER_SIZE + 1;
-            buffer = realloc(buffer, MAX_HEADER_SIZE + 1);
+            buffer_size = MAX_HEADER_SIZE + NULL_TERMINATOR;
+            buffer = realloc(buffer, buffer_size);
             if (!buffer)
             {
                 free(buffer);
                 close(*socket_fd);
                 free(socket_fd);
-                return &our_ERR_IO;
+                return &our_ERR_OUT_OF_MEMORY;
             }
         }
     }
@@ -144,7 +153,7 @@ static void *handle_connection(void *arg)
 
 /*******************************************************************
  * Init connection
- */
+ *******************************************************************/
 int http_init(uint16_t port, EventCallback callback)
 {
     passive_socket = tcp_server_init(port);
@@ -173,29 +182,27 @@ int http_receive(void)
 {
     if (passive_socket == -1)
     {
-        perror("Error creating socket");
         return ERR_IO;
     }
     int *active_socket = malloc(sizeof(int));
     if (active_socket == NULL)
     {
-        perror("malloc failed");
+        close(passive_socket);
         return ERR_IO;
     }
     *active_socket = tcp_accept(passive_socket);
     if (*active_socket == -1)
     {
-        close(passive_socket);
-        perror("accept");
         free(active_socket);
         return ERR_IO;
     }
+
+    // Initialize pthread attributes
     pthread_attr_t attr;
     pthread_t thread;
     if (pthread_attr_init(&attr) != 0 ||
         pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0)
     {
-        perror("Failed to initialize pthread attributes");
         close(*active_socket);
         free(active_socket);
         return ERR_THREADING;
@@ -204,7 +211,6 @@ int http_receive(void)
     // Create a detached thread to handle the connection
     if (pthread_create(&thread, &attr, (void *(*)(void *))handle_connection, (void *)active_socket) != 0)
     {
-        perror("Failed to create thread");
         pthread_attr_destroy(&attr);
         close(*active_socket);
         free(active_socket);
@@ -213,7 +219,13 @@ int http_receive(void)
 
     // Destroy pthread attributes after use
     if (pthread_attr_destroy(&attr))
+    {
+        close(*active_socket);
+        free(active_socket);
         return ERR_THREADING;
+    }
+    // close(*active_socket);
+    // free(active_socket);
 
     return ERR_NONE;
 }
@@ -283,6 +295,10 @@ int http_reply(int connection, const char *status, const char *headers, const ch
     M_REQUIRE_NON_NULL(headers);
 
     size_t content_length_size = snprintf(NULL, 0, "%zu", body_len);
+    if (content_length_size < 0)
+    {
+        return ERR_IO;
+    }
 
     size_t header_size = strlen(HTTP_PROTOCOL_ID) + strlen(status) + strlen(HTTP_LINE_DELIM) +
                          strlen(headers) + strlen("Content-Length: ") + content_length_size +

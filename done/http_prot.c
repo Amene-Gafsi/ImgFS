@@ -3,6 +3,7 @@
 #include "util.h"
 #include "error.h"
 #include <stdlib.h>
+#include "imgfs.h"
 
 /*************************************************************************
  * Checks whether the `message` URI starts with the provided `target_uri`
@@ -24,6 +25,7 @@ int http_match_verb(const struct http_string *method, const char *verb)
     M_REQUIRE_NON_NULL(verb);
     M_REQUIRE_NON_NULL(method->val);
 
+    // First compare the length of the two strings
     size_t verb_length = strlen(verb);
     if (method->len != verb_length)
     {
@@ -43,18 +45,20 @@ int http_get_var(const struct http_string *url, const char *name, char *out, siz
     M_REQUIRE_NON_NULL(name);
     M_REQUIRE_NON_NULL(out);
 
-    char parameter[strlen(name) + 2];
-    snprintf(parameter, sizeof(parameter), "%s=", name);
+    char parameter[strlen(name) + 1 + NULL_TERMINATOR];   // +1 for '='
+    if(snprintf(parameter, sizeof(parameter), "%s=", name) < 0){
+        return ERR_IO;
+    }
 
-    // look for ? in the url
+    // Look for '?' in the url
     const char *url_args = strchr(url->val, '?');
     if (!url_args)
     {
         return 0;
     }
-    url_args += 1;
+    url_args++;
 
-    // look for the parameter in the url
+    // Look for the parameter in the url
     const char *param_start = strstr(url_args, parameter);
     if (!param_start)
     {
@@ -62,7 +66,7 @@ int http_get_var(const struct http_string *url, const char *name, char *out, siz
     }
     param_start += strlen(parameter);
 
-    // look for the end of the parameter
+    // Look for the end of the parameter
     const char *param_end = strchr(param_start, '&');
     if (!param_end)
     {
@@ -77,7 +81,6 @@ int http_get_var(const struct http_string *url, const char *name, char *out, siz
 
     strncpy(out, param_start, value_len);
     out[value_len] = '\0';
-
     return value_len;
 }
 
@@ -114,8 +117,8 @@ static const char *get_next_token(const char *message, const char *delimiter, st
  ************************************************************************************************************ */
 static const char *http_parse_headers(const char *header_start, struct http_message *output)
 {
-    // TODO : BONUS
-    //_Static_assert(strcmp(HTTP_HDR_END_DELIM, HTTP_LINE_DELIM HTTP_LINE_DELIM) == 0, "HTTP_HDR_END_DELIM is not twice HTTP_LINE_DELIM");
+    // Static assert to check that one delimiter is twice the other
+    _Static_assert(strcmp(HTTP_HDR_END_DELIM, HTTP_LINE_DELIM HTTP_LINE_DELIM) == 0, "HTTP_HDR_END_DELIM is not twice HTTP_LINE_DELIM");
 
     if (header_start == NULL || output == NULL)
         return NULL;
@@ -123,7 +126,7 @@ static const char *http_parse_headers(const char *header_start, struct http_mess
     const char *remaining = header_start;
     struct http_string pair;
 
-    // put key in output
+    // Put key in output
     remaining = get_next_token(remaining, HTTP_HDR_KV_DELIM, &pair);
     if (remaining == NULL)
         return NULL;
@@ -144,12 +147,13 @@ int http_parse_message(const char *stream, size_t bytes_received, struct http_me
     M_REQUIRE_NON_NULL(out);
     M_REQUIRE_NON_NULL(content_len);
 
-    // check that headers have been completly received
+    // Check that headers have been completly received
     if (!strstr(stream, HTTP_HDR_END_DELIM))
         return 0;
 
     // Initialize number of headers
     out->num_headers = 0;
+
     // Parse the first line
     const char *after_key = stream;
     struct http_string pair;
@@ -163,6 +167,7 @@ int http_parse_message(const char *stream, size_t bytes_received, struct http_me
     pair.val = NULL;
     after_key = get_next_token(after_key, HTTP_LINE_DELIM, NULL);
 
+    // Extract all header key-value pairs
     while (after_key != NULL && strncmp(after_key, HTTP_LINE_DELIM, strlen(HTTP_LINE_DELIM)))
     {
         after_key = http_parse_headers(after_key, out);
@@ -171,7 +176,7 @@ int http_parse_message(const char *stream, size_t bytes_received, struct http_me
 
     after_key = get_next_token(after_key, HTTP_LINE_DELIM, NULL); // skip the \n
 
-    // get the content length from the headers
+    // Get the content length from the headers
     for (size_t i = 0; i < out->num_headers; i++)
     {
         if (!strncmp(out->headers[i].key.val, "Content-Length", out->headers[i].key.len))

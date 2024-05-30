@@ -26,30 +26,36 @@ static pthread_mutex_t imgfs_mutex;
 
 
 /********************************************************************/ /**
-                                                                        * Startup function. Create imgFS file and load in-memory structure.
-                                                                        * Pass the imgFS file name as argv[1] and optionnaly port number as argv[2]
-                                                                        ********************************************************************** */
+* Startup function. Create imgFS file and load in-memory structure.
+* Pass the imgFS file name as argv[1] and optionnaly port number as argv[2]
+********************************************************************** */
 int server_startup(int argc, char **argv)
 {
     if (argc < 2)
         return ERR_NOT_ENOUGH_ARGUMENTS;
 
     if (VIPS_INIT(argv[0])) {
-        return ERR_IO;  
+        return ERR_IMGLIB;  
     }
 
     char *filename = argv[1];
+    int temp_port = 0;
 
-    if (argc > 2)
-        server_port = atoi(argv[2]);
-        if (!server_port) return ERR_INVALID_ARGUMENT; 
-    if (server_port <= 0)
-    {
+    // server_port takes the value of the port number passed as argument if it's valid, otherwise it takes the default value
+    if (argc > 2){
+        temp_port = atoi(argv[2]);
+        if (temp_port == 0) return ERR_INVALID_ARGUMENT; 
+        if (temp_port > 0) {
+            server_port = (uint16_t)temp_port;
+        } 
+    }
+    if (server_port <= 0) {
         server_port = DEFAULT_LISTENING_PORT;
     }
-    if (pthread_mutex_init(&imgfs_mutex, NULL) != 0) {
+
+    if (pthread_mutex_init(&imgfs_mutex, NULL)) {
         vips_shutdown();
-        return ERR_IO;
+        return ERR_THREADING;
     }
 
     int ret = ERR_NONE;
@@ -71,8 +77,8 @@ int server_startup(int argc, char **argv)
 }
 
 /********************************************************************/ /**
-                                                                        * Shutdown function. Free the structures and close the file.
-                                                                        ********************************************************************** */
+* Shutdown function. Free the structures and close the file.
+********************************************************************** */
 void server_shutdown(void)
 {
     fprintf(stderr, "Shutting down server...\n");
@@ -114,6 +120,9 @@ static int reply_302_msg(int connection)
     return http_reply(connection, "302 Found", location, "", 0);
 }
 
+/**********************************************************************
+ * Reply with the list of images in JSON format.
+ ********************************************************************** */
 int handle_list_call(struct http_message *msg, int connection) 
 {
     char *json = NULL;
@@ -122,7 +131,8 @@ int handle_list_call(struct http_message *msg, int connection)
     ret = do_list(&fs_file, JSON, &json);
     pthread_mutex_unlock(&imgfs_mutex);
     if (ret != ERR_NONE)
-    {
+    {   
+        free(json);
         return reply_error_msg(connection, ret);
     }
     int body_size = strlen(json);
@@ -135,6 +145,9 @@ int handle_list_call(struct http_message *msg, int connection)
     return ret;
 }
 
+/**********************************************************************
+ * Reply with the image requested.
+ ********************************************************************** */
 int handle_read_call(struct http_message *msg, int connection) 
 {
     char out_res[MAX_HEADER_SIZE] = {0}; //TODO : null terminator + 1?
@@ -152,7 +165,7 @@ int handle_read_call(struct http_message *msg, int connection)
         return reply_error_msg(connection, ERR_RESOLUTIONS);
     }
     uint32_t image_size = 0;
-    char *image_buffer;
+    char *image_buffer;  //TODO need malloc and free
     int ret = ERR_NONE;
     pthread_mutex_lock(&imgfs_mutex);
     ret = do_read(out_img_id, res, &image_buffer, &image_size, &fs_file);
@@ -170,9 +183,12 @@ int handle_read_call(struct http_message *msg, int connection)
     return ret;
 }
 
+/**********************************************************************
+ * Delete the image requested and reply with 302 OK message.
+ ********************************************************************** */
 int handle_delete_call(struct http_message *msg, int connection)
 {
-    char out_img_id[MAX_IMG_ID];
+    char out_img_id[MAX_IMG_ID];   //TODO : null terminator + 1?
     if(http_get_var(&msg->uri, "img_id", out_img_id, MAX_IMG_ID) == 0) {
         return reply_error_msg(connection, ERR_NOT_ENOUGH_ARGUMENTS);
     }
@@ -186,6 +202,9 @@ int handle_delete_call(struct http_message *msg, int connection)
     return reply_302_msg(connection);
 }
 
+/**********************************************************************
+ * Insert the image requested and reply with 302 OK message.
+ ********************************************************************** */
 int handle_insert_call(struct http_message *msg, int connection)
 {
     char out_img_id[MAX_IMG_ID];
@@ -197,9 +216,11 @@ int handle_insert_call(struct http_message *msg, int connection)
         return reply_error_msg(connection, ERR_OUT_OF_MEMORY);
     }
     memcpy(image_data, msg->body.val, msg->body.len);
+
     pthread_mutex_lock(&imgfs_mutex);
     int ret = do_insert(image_data, msg->body.len, out_img_id, &fs_file);
     pthread_mutex_unlock(&imgfs_mutex);
+    
     free(image_data);
     if (ret != ERR_NONE) {
         return reply_error_msg(connection, ret);

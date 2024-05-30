@@ -39,7 +39,10 @@ int do_read(const char *img_id, int resolution, char **image_buffer, uint32_t *i
             }
 
             // Set file pointer to the correct position
-            fseek(imgfs_file->file, imgfs_file->metadata[i].offset[resolution], SEEK_SET);
+            if (fseek(imgfs_file->file, imgfs_file->metadata[i].offset[resolution], SEEK_SET))
+            {
+                return ERR_IO;
+            }
 
             // Allocate memory for the image in the given resolution
             *image_buffer = calloc(ONE_ELEMENT, imgfs_file->metadata[i].size[resolution]);
@@ -49,7 +52,6 @@ int do_read(const char *img_id, int resolution, char **image_buffer, uint32_t *i
             }
 
             *image_size = imgfs_file->metadata[i].size[resolution];
-
             if (fread(*image_buffer, *image_size, ONE_ELEMENT, imgfs_file->file) != ONE_ELEMENT)
             {
                 free(*image_buffer);

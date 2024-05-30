@@ -32,6 +32,7 @@ static const uint16_t MAX_SMALL_RES = 512;
 
 #define TWO_ELEMENTS 2
 
+
 /**********************************************************************
  * Displays some explanations.
  ********************************************************************** */
@@ -70,7 +71,11 @@ int help(int useless _unused, char **useless_too _unused)
  *******************************************************************/
 static void create_name(const char *img_id, int resolution, char **new_name)
 {
-    *new_name = calloc(1, MAX_IMGFS_NAME + 1); 
+    *new_name = calloc(1, MAX_IMGFS_NAME + NULL_TERMINATOR); 
+    if (*new_name == NULL)
+    {
+        return;
+    }
 
     const char *resolution_suffix;
 
@@ -94,12 +99,13 @@ static void create_name(const char *img_id, int resolution, char **new_name)
     }
 
     // Create a temporary buffer for the concatenation
-    char temp[MAX_IMGFS_NAME + 1];
-    snprintf(temp, sizeof(temp), "%s%s.jpg", img_id, resolution_suffix);
+    char temp[MAX_IMGFS_NAME + NULL_TERMINATOR];  // +1 for the null terminator
+    if(snprintf(temp, sizeof(temp), "%s%s.jpg", img_id, resolution_suffix) < 0){
+        free(*new_name);
+    } 
     
     // Copy the result to the new_name
     strcpy(*new_name, temp);
-
     if (*new_name == NULL)
     {
         free(*new_name);
@@ -115,7 +121,6 @@ static int write_disk_image(const char *filename, const char *image_buffer, uint
     M_REQUIRE_NON_NULL(image_buffer);
 
     FILE *file = fopen(filename, "wb");
-
     if (file == NULL)
     {
         return ERR_IO;
@@ -140,7 +145,6 @@ static int read_disk_image(const char *path, char **image_buffer, uint32_t *imag
     M_REQUIRE_NON_NULL(image_size);
 
     FILE *file = fopen(path, "rb");
-
     if (file == NULL)
     {
         return ERR_IO;

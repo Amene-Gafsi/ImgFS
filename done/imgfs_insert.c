@@ -30,7 +30,7 @@ int do_insert(const char *image_buffer, size_t image_size, const char *img_id, s
 
     for (int i = 0; i < imgfs_file->header.max_files; i++)
     {
-        // find an empty entry in the metadata table
+        // Find an empty entry in the metadata table
         if (!imgfs_file->metadata[i].is_valid)
         {
             if (SHA256((const unsigned char *)image_buffer, image_size, imgfs_file->metadata[i].SHA) == NULL)
@@ -58,7 +58,6 @@ int do_insert(const char *image_buffer, size_t image_size, const char *img_id, s
             imgfs_file->metadata[i].orig_res[HEIGHT_INDEX] = height;
 
             ret = do_name_and_content_dedup(imgfs_file, i);
-
             if (ret != ERR_NONE)
             {
                 return ret;
@@ -67,7 +66,10 @@ int do_insert(const char *image_buffer, size_t image_size, const char *img_id, s
             // Check if image was not duplicated
             if (imgfs_file->metadata[i].offset[ORIG_RES] == OFFSET_ZERO)
             {
-                fseek(imgfs_file->file, 0, SEEK_END);
+                if (fseek(imgfs_file->file, 0, SEEK_END))
+                {
+                    return ERR_IO;
+                }
 
                 // Update the metadata
                 imgfs_file->metadata[i].offset[ORIG_RES] = ftell(imgfs_file->file);

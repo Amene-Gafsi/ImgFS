@@ -70,6 +70,7 @@ int do_list(const struct imgfs_file *imgfs_file, enum do_list_mode output_mode, 
             return ERR_RUNTIME;
         }
 
+        // Duplicate the json string
         *json = strdup(json_object_to_json_string(jobj));
         json_object_put(jobj);
         if (*json == NULL)
