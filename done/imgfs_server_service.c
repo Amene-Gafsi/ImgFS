@@ -175,7 +175,7 @@ int handle_read_call(struct http_message *msg, int connection)
         return reply_error_msg(connection, ret);
     }
     ret = http_reply(connection, HTTP_OK, "Content-Type: image/jpeg" HTTP_LINE_DELIM, image_buffer, image_size);
-    free(image_buffer);
+    //free(image_buffer); //TODO : we can remove this because we already free the image_buffer in do_read
     if (ret != ERR_NONE)
     {
         return reply_error_msg(connection, ret);
@@ -211,7 +211,7 @@ int handle_insert_call(struct http_message *msg, int connection)
     if (http_get_var(&msg->uri, "name", out_img_id, MAX_IMG_ID) == 0) {
         return reply_error_msg(connection, ERR_NOT_ENOUGH_ARGUMENTS);
     }
-    char *image_data = (char *)malloc(msg->body.len);
+    char *image_data = (char *)malloc(msg->body.len); //TODO : this has to be allocated dynamically, this is asked in the instructions
     if (!image_data) {
         return reply_error_msg(connection, ERR_OUT_OF_MEMORY);
     }
