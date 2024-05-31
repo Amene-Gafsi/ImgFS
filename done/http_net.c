@@ -224,7 +224,7 @@ int http_receive(void)
         free(active_socket);
         return ERR_THREADING;
     }
-    // close(*active_socket);
+    // close(*active_socket);  //TODO
     // free(active_socket);
 
     return ERR_NONE;

@@ -81,7 +81,7 @@ int server_startup(int argc, char **argv)
 ********************************************************************** */
 void server_shutdown(void)
 {
-    fprintf(stderr, "Shutting down server...\n");
+    fprintf(stderr, "Shutting down...\n");
     http_close();
     do_close(&fs_file);
     vips_shutdown();
@@ -165,7 +165,7 @@ int handle_read_call(struct http_message *msg, int connection)
         return reply_error_msg(connection, ERR_RESOLUTIONS);
     }
     uint32_t image_size = 0;
-    char *image_buffer;  //TODO need malloc and free
+    char *image_buffer = NULL; //TODO need malloc and free
     int ret = ERR_NONE;
     pthread_mutex_lock(&imgfs_mutex);
     ret = do_read(out_img_id, res, &image_buffer, &image_size, &fs_file);
@@ -175,7 +175,7 @@ int handle_read_call(struct http_message *msg, int connection)
         return reply_error_msg(connection, ret);
     }
     ret = http_reply(connection, HTTP_OK, "Content-Type: image/jpeg" HTTP_LINE_DELIM, image_buffer, image_size);
-    //free(image_buffer); //TODO : we can remove this because we already free the image_buffer in do_read
+    free(image_buffer);
     if (ret != ERR_NONE)
     {
         return reply_error_msg(connection, ret);
@@ -219,9 +219,9 @@ int handle_insert_call(struct http_message *msg, int connection)
 
     pthread_mutex_lock(&imgfs_mutex);
     int ret = do_insert(image_data, msg->body.len, out_img_id, &fs_file);
+    free(image_data);
     pthread_mutex_unlock(&imgfs_mutex);
     
-    free(image_data);
     if (ret != ERR_NONE) {
         return reply_error_msg(connection, ret);
     }
