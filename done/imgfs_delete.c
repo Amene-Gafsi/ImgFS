@@ -37,26 +37,7 @@ int do_delete(const char *img_id, struct imgfs_file *imgfs_file)
     {
         return ERR_IMAGE_NOT_FOUND;
     }
-
-
-
-    // Changes are made first to the metadata (memory, then disk), then to the header if successful
-
-    //TODO : write only one element of the of the metadata array
-
-    /*if (!fseek(imgfs_file->file, sizeof(struct imgfs_header), SEEK_SET))
-    {
-        if (fwrite(imgfs_file->metadata, sizeof(struct img_metadata), imgfs_file->header.max_files, imgfs_file->file) == imgfs_file->header.max_files)
-        {
-            if (!fseek(imgfs_file->file, 0, SEEK_SET))
-            {
-                if (fwrite(&(imgfs_file->header), sizeof(struct imgfs_header), ONE_ELEMENT, imgfs_file->file) == ONE_ELEMENT)
-                {
-                    return ERR_NONE;
-                }
-            }
-        }
-    }*/
+    
     uint32_t old_version = imgfs_file->header.version;
     uint32_t old_nb_files = imgfs_file->header.nb_files;
 

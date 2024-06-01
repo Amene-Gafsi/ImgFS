@@ -36,8 +36,7 @@ MK_OUR_ERR(ERR_IO);
  * Manages the HTTP connection with the client
  *******************************************************************/
 static void *handle_connection(void *arg)
-{ // TODO : free soket ?
-
+{ 
     sigset_t mask;
     sigemptyset(&mask);
     sigaddset(&mask, SIGINT);
@@ -187,7 +186,6 @@ int http_receive(void)
     int *active_socket = malloc(sizeof(int));
     if (active_socket == NULL)
     {
-        close(passive_socket);
         return ERR_IO;
     }
     *active_socket = tcp_accept(passive_socket);
@@ -200,32 +198,22 @@ int http_receive(void)
     // Initialize pthread attributes
     pthread_attr_t attr;
     pthread_t thread;
-    if (pthread_attr_init(&attr) != 0 ||
-        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0)
-    {
-        close(*active_socket);
-        free(active_socket);
-        return ERR_THREADING;
-    }
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
 
     // Create a detached thread to handle the connection
-    if (pthread_create(&thread, &attr, (void *(*)(void *))handle_connection, (void *)active_socket) != 0)
+    if (pthread_create(&thread, &attr, (void *(*)(void *))handle_connection, (void *)active_socket))
     {
         pthread_attr_destroy(&attr);
-        close(*active_socket);
-        free(active_socket);
         return ERR_THREADING;
     }
 
     // Destroy pthread attributes after use
     if (pthread_attr_destroy(&attr))
     {
-        close(*active_socket);
-        free(active_socket);
         return ERR_THREADING;
     }
-    // close(*active_socket);  //TODO
-    // free(active_socket);
 
     return ERR_NONE;
 }

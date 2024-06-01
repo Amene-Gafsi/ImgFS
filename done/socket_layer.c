@@ -10,8 +10,11 @@
 int tcp_server_init(uint16_t port)
 {
     int fd = socket(AF_INET, SOCK_STREAM, 0);
-    int option = 1; // TODO ifdef SOCKET_REUSE
+
+    #ifdef SOCKET_REUSE
+    int option = 1;
     setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+    #endif
 
     if (fd == -1)
     {

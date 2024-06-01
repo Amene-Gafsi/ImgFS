@@ -76,7 +76,6 @@ int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
         return ERR_IO;
     }
 
-    //TODO : missing arguments 
     VipsImage *vips_orig_img = NULL;
     if (vips_jpegload_buffer(orig_img, imgfs_file->metadata[index].size[ORIG_RES], &vips_orig_img, NULL))
     {
@@ -126,21 +125,6 @@ int lazily_resize(int resolution, struct imgfs_file *imgfs_file, size_t index)
     }
 
     imgfs_file->metadata[index].offset[resolution] = (uint64_t)end_of_file - len;
-
-    //TODO : not write whole metadata array
-    /*if (fseek(imgfs_file->file, sizeof(imgfs_file->header), SEEK_SET))
-    {
-        free_images(orig_img, resized_img, vips_orig_img, vips_resized_img);
-        return ERR_IO;
-    }
-    
-    if (fwrite(imgfs_file->metadata, sizeof(struct img_metadata), imgfs_file->header.max_files, imgfs_file->file) != imgfs_file->header.max_files)
-    {
-        free_images(orig_img, resized_img, vips_orig_img, vips_resized_img);
-        return ERR_IO;
-    }
-
-    return free_images(orig_img, resized_img, vips_orig_img, vips_resized_img);*/
 
     size_t metadata_offset = sizeof(imgfs_file->header) + index * sizeof(struct img_metadata);
 

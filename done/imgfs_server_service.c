@@ -127,7 +127,7 @@ int handle_list_call(struct http_message *msg, int connection)
 {
     char *json = NULL;
     int ret = ERR_NONE;
-    pthread_mutex_lock(&imgfs_mutex); //TODO : error handling
+    pthread_mutex_lock(&imgfs_mutex);
     ret = do_list(&fs_file, JSON, &json);
     pthread_mutex_unlock(&imgfs_mutex);
     if (ret != ERR_NONE)
@@ -150,8 +150,8 @@ int handle_list_call(struct http_message *msg, int connection)
  ********************************************************************** */
 int handle_read_call(struct http_message *msg, int connection) 
 {
-    char out_res[MAX_HEADER_SIZE] = {0}; //TODO : null terminator + 1?
-    char out_img_id[MAX_IMG_ID] = {0};
+    char out_res[MAX_HEADER_SIZE + NULL_TERMINATOR];
+    char out_img_id[MAX_IMG_ID + NULL_TERMINATOR];
 
     if(http_get_var(&msg->uri, "res", out_res, MAX_HEADER_SIZE) == 0) {
         return reply_error_msg(connection, ERR_NOT_ENOUGH_ARGUMENTS);
@@ -165,7 +165,7 @@ int handle_read_call(struct http_message *msg, int connection)
         return reply_error_msg(connection, ERR_RESOLUTIONS);
     }
     uint32_t image_size = 0;
-    char *image_buffer = NULL; //TODO need malloc and free
+    char *image_buffer = NULL;
     int ret = ERR_NONE;
     pthread_mutex_lock(&imgfs_mutex);
     ret = do_read(out_img_id, res, &image_buffer, &image_size, &fs_file);
@@ -188,7 +188,7 @@ int handle_read_call(struct http_message *msg, int connection)
  ********************************************************************** */
 int handle_delete_call(struct http_message *msg, int connection)
 {
-    char out_img_id[MAX_IMG_ID];   //TODO : null terminator + 1?
+    char out_img_id[MAX_IMG_ID + NULL_TERMINATOR];
     if(http_get_var(&msg->uri, "img_id", out_img_id, MAX_IMG_ID) == 0) {
         return reply_error_msg(connection, ERR_NOT_ENOUGH_ARGUMENTS);
     }
@@ -211,7 +211,7 @@ int handle_insert_call(struct http_message *msg, int connection)
     if (http_get_var(&msg->uri, "name", out_img_id, MAX_IMG_ID) == 0) {
         return reply_error_msg(connection, ERR_NOT_ENOUGH_ARGUMENTS);
     }
-    char *image_data = (char *)malloc(msg->body.len); //TODO : this has to be allocated dynamically, this is asked in the instructions
+    char *image_data = (char *)malloc(msg->body.len);
     if (!image_data) {
         return reply_error_msg(connection, ERR_OUT_OF_MEMORY);
     }
