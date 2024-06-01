@@ -102,6 +102,7 @@ int do_open(const char *imgfs_filename, const char *open_mode, struct imgfs_file
     {
         // Free allocated metadata and close the file in case of an error
         free(imgfs_file->metadata);
+        imgfs_file->metadata = NULL;
         fclose(imgfs_file->file);
         return ERR_IO;
     }
@@ -129,17 +130,22 @@ void do_close(struct imgfs_file *imgfs_file)
 /*******************************************************************
  * Transforms resolution string to its int value.
  */
-int resolution_atoi (const char* str)
+int resolution_atoi(const char *str)
 {
-    if (str == NULL) return -1;
+    if (str == NULL)
+        return -1;
 
-    if (!strcmp(str, "thumb") || !strcmp(str, "thumbnail")) {
+    if (!strcmp(str, "thumb") || !strcmp(str, "thumbnail"))
+    {
         return THUMB_RES;
-    } else if (!strcmp(str, "small")) {
+    }
+    else if (!strcmp(str, "small"))
+    {
         return SMALL_RES;
-    } else if (!strcmp(str, "orig")  || !strcmp(str, "original")) {
+    }
+    else if (!strcmp(str, "orig") || !strcmp(str, "original"))
+    {
         return ORIG_RES;
     }
     return -1;
 }
-

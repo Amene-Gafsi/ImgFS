@@ -28,7 +28,7 @@ int do_insert(const char *image_buffer, size_t image_size, const char *img_id, s
         return ERR_IMGFS_FULL;
     }
 
-    for (int i = 0; i < imgfs_file->header.max_files; i++)
+    for (uint32_t i = 0; i < imgfs_file->header.max_files; i++)
     {
         // Find an empty entry in the metadata table
         if (!imgfs_file->metadata[i].is_valid)
@@ -72,11 +72,11 @@ int do_insert(const char *image_buffer, size_t image_size, const char *img_id, s
                 }
 
                 // Update the metadata
-                imgfs_file->metadata[i].offset[ORIG_RES] = ftell(imgfs_file->file);
+                imgfs_file->metadata[i].offset[ORIG_RES] = (uint64_t)ftell(imgfs_file->file);
                 imgfs_file->metadata[i].offset[THUMB_RES] = EMPTY;
                 imgfs_file->metadata[i].offset[SMALL_RES] = EMPTY;
 
-                imgfs_file->metadata[i].size[ORIG_RES] = image_size;
+                imgfs_file->metadata[i].size[ORIG_RES] = (uint32_t)image_size;
                 imgfs_file->metadata[i].size[THUMB_RES] = EMPTY;
                 imgfs_file->metadata[i].size[SMALL_RES] = EMPTY;
 

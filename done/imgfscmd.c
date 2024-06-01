@@ -18,9 +18,6 @@
 #define NB_COMMANDS 6
 #define FIRST_ARG 1
 
-/*******************************************************************************
- * MAIN
- */
 typedef int (*command)(int argc, char *argv[]);
 typedef struct
 {
@@ -28,21 +25,24 @@ typedef struct
     command command;
 } command_mapping;
 
-// Create commands
-command_mapping commands[NB_COMMANDS] = {{"list", do_list_cmd}, 
-                                        {"create", do_create_cmd}, 
-                                        {"insert", do_insert_cmd}, 
-                                        {"read", do_read_cmd}, 
-                                        {"delete", do_delete_cmd}, 
-                                        {"help", help}};
+command_mapping commands[NB_COMMANDS] = {{"list", do_list_cmd},
+                                         {"create", do_create_cmd},
+                                         {"insert", do_insert_cmd},
+                                         {"read", do_read_cmd},
+                                         {"delete", do_delete_cmd},
+                                         {"help", help}};
 
+/*******************************************************************************
+ * MAIN
+ */
 int main(int argc, char *argv[])
-{   
+{
     int ret = 0;
 
-    if (VIPS_INIT(argv[0])) {
+    if (VIPS_INIT(argv[0]))
+    {
         // Handle initialization failure
-        ret = ERR_IMGLIB; 
+        ret = ERR_IMGLIB;
         fprintf(stderr, "ERROR: %s\n", ERR_MSG(ret));
         return ret;
     }

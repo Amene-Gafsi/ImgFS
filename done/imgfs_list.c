@@ -44,6 +44,7 @@ int do_list(const struct imgfs_file *imgfs_file, enum do_list_mode output_mode, 
         if (jarray == NULL)
         {
             json_object_put(jobj);
+            jobj = NULL;
             return ERR_RUNTIME;
         }
 
@@ -55,9 +56,14 @@ int do_list(const struct imgfs_file *imgfs_file, enum do_list_mode output_mode, 
                 if (jstring == NULL || json_object_array_add(jarray, jstring) < 0)
                 {
                     json_object_put(jobj);
+                    jobj = NULL;
                     json_object_put(jarray);
+                    jarray = NULL;
                     if (jstring != NULL)
+                    {
                         json_object_put(jstring);
+                        jstring = NULL;
+                    }
                     return ERR_RUNTIME;
                 }
             }
@@ -66,13 +72,16 @@ int do_list(const struct imgfs_file *imgfs_file, enum do_list_mode output_mode, 
         if (json_object_object_add(jobj, "Images", jarray) < 0)
         {
             json_object_put(jobj);
+            jobj = NULL;
             json_object_put(jarray);
+            jarray = NULL;
             return ERR_RUNTIME;
         }
 
         // Duplicate the json string
         *json = strdup(json_object_to_json_string(jobj));
         json_object_put(jobj);
+        jobj = NULL;
         if (*json == NULL)
         {
             return ERR_RUNTIME;

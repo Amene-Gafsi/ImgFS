@@ -1,4 +1,4 @@
-/* 
+/*
  * @file imgfs_server.c
  * @brief ImgFS server part, main
  *
@@ -27,14 +27,16 @@ static void signal_handler(int sig_num _unused)
 static void set_signal_handler(void)
 {
     struct sigaction action;
-    if (sigemptyset(&action.sa_mask) == -1) {
+    if (sigemptyset(&action.sa_mask) == -1)
+    {
         perror("sigemptyset() in set_signal_handler()");
         abort();
     }
     action.sa_handler = signal_handler;
-    action.sa_flags   = 0;
-    if ((sigaction(SIGINT,  &action, NULL) < 0) ||
-        (sigaction(SIGTERM,  &action, NULL) < 0)) {
+    action.sa_flags = 0;
+    if ((sigaction(SIGINT, &action, NULL) < 0) ||
+        (sigaction(SIGTERM, &action, NULL) < 0))
+    {
         perror("sigaction() in set_signal_handler()");
         abort();
     }
@@ -42,12 +44,12 @@ static void set_signal_handler(void)
 
 /********************************************************************/
 
-int main (int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
-    set_signal_handler();  
+    set_signal_handler();
     server_startup(argc, argv);
     int ret = ERR_NONE;
-    while((ret = http_receive()) == ERR_NONE);
+    while ((ret = http_receive()) == ERR_NONE);
 
     return 0;
 }

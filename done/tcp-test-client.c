@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    uint16_t port = atoi(argv[1]);
+    uint16_t port = (uint16_t)atoi(argv[1]);
     const char *filename = argv[2];
 
 
@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    int file_size = file_stat.st_size;
+    int file_size = (int)file_stat.st_size;
 
     if (file_size > MAX_SIZE) {
     return 1;
@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
     char file_buffer[file_size+1];
     file_buffer[file_size] = '\0';
     
-    int bytes_read = read(file_fd, file_buffer, file_size);
+    int bytes_read = (int)read(file_fd, file_buffer, (size_t)file_size);
     close(file_fd);
     if (bytes_read != file_size) {
         return 1;
@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
 
     printf("Sending %s\n", filename);
 
-    if (tcp_send(sock, file_buffer, file_size) < 0) {
+    if (tcp_send(sock, file_buffer, (size_t)file_size) < 0) {
         printf("Error sending file\n");
         return 1;
     }

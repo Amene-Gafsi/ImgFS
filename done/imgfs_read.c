@@ -39,7 +39,7 @@ int do_read(const char *img_id, int resolution, char **image_buffer, uint32_t *i
             }
 
             // Set file pointer to the correct position
-            if (fseek(imgfs_file->file, imgfs_file->metadata[i].offset[resolution], SEEK_SET))
+            if (fseek(imgfs_file->file, (long)imgfs_file->metadata[i].offset[resolution], SEEK_SET))
             {
                 return ERR_IO;
             }
@@ -55,6 +55,7 @@ int do_read(const char *img_id, int resolution, char **image_buffer, uint32_t *i
             if (fread(*image_buffer, *image_size, ONE_ELEMENT, imgfs_file->file) != ONE_ELEMENT)
             {
                 free(*image_buffer);
+                *image_buffer = NULL;
                 return ERR_IO;
             }
         }

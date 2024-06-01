@@ -45,8 +45,9 @@ int http_get_var(const struct http_string *url, const char *name, char *out, siz
     M_REQUIRE_NON_NULL(name);
     M_REQUIRE_NON_NULL(out);
 
-    char parameter[strlen(name) + 1 + NULL_TERMINATOR];   // +1 for '='
-    if(snprintf(parameter, sizeof(parameter), "%s=", name) < 0){
+    char parameter[strlen(name) + 1 + NULL_TERMINATOR]; // +1 for '='
+    if (snprintf(parameter, sizeof(parameter), "%s=", name) < 0)
+    {
         return ERR_IO;
     }
 
@@ -73,8 +74,8 @@ int http_get_var(const struct http_string *url, const char *name, char *out, siz
         param_end = url->val + url->len;
     }
 
-    size_t value_len = param_end - param_start;
-    if (value_len >= out_len)
+    unsigned long value_len = param_end - param_start;
+    if (value_len >= (int)out_len)
     {
         return ERR_RUNTIME;
     }
@@ -191,7 +192,7 @@ int http_parse_message(const char *stream, size_t bytes_received, struct http_me
     if (*content_len == 0)
         return 1;
 
-    if (after_key == NULL || bytes_received - (after_key - stream) < *content_len)
+    if (after_key == NULL || (int)bytes_received - (after_key - stream) < *content_len)
     {
         return 0;
     }

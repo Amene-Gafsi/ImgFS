@@ -13,7 +13,6 @@
 #include <string.h>
 #include <inttypes.h>
 
-
 // default values
 static const uint32_t default_max_files = 128;
 static const uint16_t default_thumb_res = 64;
@@ -31,7 +30,6 @@ static const uint16_t MAX_SMALL_RES = 512;
 #define WIDTH_AND_HEIGHT_ARGS 2
 
 #define TWO_ELEMENTS 2
-
 
 /**********************************************************************
  * Displays some explanations.
@@ -64,14 +62,14 @@ int help(int useless _unused, char **useless_too _unused)
     printf("  delete <imgFS_filename> <imgID>: delete image imgID from imgFS.\n");
 
     return ERR_NONE;
-    }
+}
 
 /********************************************************************
  * Create a new image name
  *******************************************************************/
 static void create_name(const char *img_id, int resolution, char **new_name)
 {
-    *new_name = calloc(1, MAX_IMGFS_NAME + NULL_TERMINATOR); 
+    *new_name = calloc(1, MAX_IMGFS_NAME + NULL_TERMINATOR);
     if (*new_name == NULL)
     {
         return;
@@ -95,20 +93,24 @@ static void create_name(const char *img_id, int resolution, char **new_name)
 
     default:
         free(*new_name);
+        *new_name = NULL;
         break;
     }
 
     // Create a temporary buffer for the concatenation
-    char temp[MAX_IMGFS_NAME + NULL_TERMINATOR];  // +1 for the null terminator
-    if(snprintf(temp, sizeof(temp), "%s%s.jpg", img_id, resolution_suffix) < 0){
+    char temp[MAX_IMGFS_NAME + NULL_TERMINATOR]; // +1 for the null terminator
+    if (snprintf(temp, sizeof(temp), "%s%s.jpg", img_id, resolution_suffix) < 0)
+    {
         free(*new_name);
-    } 
-    
+        *new_name = NULL;
+    }
+
     // Copy the result to the new_name
     strcpy(*new_name, temp);
     if (*new_name == NULL)
     {
         free(*new_name);
+        *new_name = NULL;
     }
 }
 
@@ -150,12 +152,13 @@ static int read_disk_image(const char *path, char **image_buffer, uint32_t *imag
         return ERR_IO;
     }
 
-    // Find file size  
-    if(fseek(file, 0, SEEK_END)){
+    // Find file size
+    if (fseek(file, 0, SEEK_END))
+    {
         fclose(file);
         return ERR_IO;
     }
-    
+
     long size = ftell(file);
     if (size < 0)
     {
@@ -165,7 +168,8 @@ static int read_disk_image(const char *path, char **image_buffer, uint32_t *imag
     *image_size = (uint32_t)ftell(file);
 
     // Reset position
-    if(fseek(file, 0, SEEK_SET)){
+    if (fseek(file, 0, SEEK_SET))
+    {
         fclose(file);
         return ERR_IO;
     }
@@ -181,6 +185,7 @@ static int read_disk_image(const char *path, char **image_buffer, uint32_t *imag
     {
         fclose(file);
         free(*image_buffer);
+        *image_buffer = NULL;
         return ERR_IO;
     }
 
@@ -372,8 +377,9 @@ int do_read_cmd(int argc, char **argv)
         return ERR_OUT_OF_MEMORY;
     error = write_disk_image(tmp_name, image_buffer, image_size);
     free(tmp_name);
+    tmp_name = NULL;
     free(image_buffer);
-
+    image_buffer = NULL;
     return error;
 }
 
@@ -405,8 +411,7 @@ int do_insert_cmd(int argc, char **argv)
 
     error = do_insert(image_buffer, image_size, argv[1], &myfile);
     free(image_buffer);
+    image_buffer = NULL;
     do_close(&myfile);
     return error;
 }
-
-
