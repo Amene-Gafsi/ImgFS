@@ -1,4 +1,4 @@
-## Project Title: Simplified Image Server
+## Image-oriented File System 
 
 ### Goal of the Project
 The goal of this project is to build an image server inspired by and simplified from Haystack. 
