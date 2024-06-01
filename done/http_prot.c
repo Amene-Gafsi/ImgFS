@@ -74,7 +74,7 @@ int http_get_var(const struct http_string *url, const char *name, char *out, siz
         param_end = url->val + url->len;
     }
 
-    unsigned long value_len = param_end - param_start;
+    int value_len = (int)(param_end - param_start);
     if (value_len >= (int)out_len)
     {
         return ERR_RUNTIME;
@@ -107,7 +107,7 @@ static const char *get_next_token(const char *message, const char *delimiter, st
     if (output)
     {
         output->val = message;
-        output->len = end - message;
+        output->len = (size_t)(end - message);
     }
 
     return end + strlen(delimiter);
@@ -198,6 +198,6 @@ int http_parse_message(const char *stream, size_t bytes_received, struct http_me
     }
 
     out->body.val = after_key;
-    out->body.len = *content_len;
+    out->body.len = (size_t)*content_len;
     return 1;
 }
