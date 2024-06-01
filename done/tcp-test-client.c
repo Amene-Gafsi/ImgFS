@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(port);
 
-    if (connect(sock, &serv_addr, sizeof(serv_addr)) < 0) {
+    if (connect(sock, (const struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
         return 1;
     }
 

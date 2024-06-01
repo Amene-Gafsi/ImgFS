@@ -29,7 +29,7 @@ int tcp_server_init(uint16_t port)
     server.sin_port = htons(port);
     server.sin_addr.s_addr = htonl(INADDR_ANY); // Accept connections on any interface
 
-    if (bind(fd, &server, sizeof(server)))
+    if (bind(fd, (const struct sockaddr *)&server, sizeof(server)))
     {
         perror("Error binding socket");
         close(fd);

@@ -80,7 +80,7 @@ int http_get_var(const struct http_string *url, const char *name, char *out, siz
         return ERR_RUNTIME;
     }
 
-    strncpy(out, param_start, value_len);
+    strncpy(out, param_start, (size_t)value_len);
     out[value_len] = '\0';
     return value_len;
 }
