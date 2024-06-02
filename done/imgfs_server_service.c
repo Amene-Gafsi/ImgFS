@@ -46,7 +46,11 @@ int server_startup(int argc, char **argv)
     {
         temp_port = atoi(argv[2]);
         if (temp_port == 0)
+        {
+            vips_shutdown();
             return ERR_INVALID_ARGUMENT;
+        }
+
         if (temp_port > 0)
         {
             server_port = (uint16_t)temp_port;

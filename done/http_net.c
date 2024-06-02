@@ -200,7 +200,7 @@ int http_receive(void)
     int *active_socket = malloc(sizeof(int));
     if (active_socket == NULL)
     {
-        return ERR_IO;
+        return ERR_OUT_OF_MEMORY;
     }
     *active_socket = tcp_accept(passive_socket);
     if (*active_socket == -1)
